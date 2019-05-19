@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+    #!/usr/bin/env python
 """
 
 
@@ -219,18 +219,18 @@ def convertPropertyName(p_name):
 #     pass
 
 
-# #
-# # Initialization
-# #
-# dcam = ctypes.windll.dcamapi
-#
-# paraminit = DCAMAPI_INIT(0, 0, 0, 0, None, None)
-# paraminit.size = ctypes.sizeof(paraminit)
-# error_code = dcam.dcamapi_init(ctypes.byref(paraminit))
-# if (error_code != DCAMERR_NOERROR):
-#     raise DCAMException("DCAM initialization failed with error code " + str(error_code))
-#
-# n_cameras = paraminit.iDeviceCount
+ #
+ # Initialization
+ #
+dcam = ctypes.windll.dcamapi
+
+paraminit = DCAMAPI_INIT(0, 0, 0, 0, None, None)
+paraminit.size = ctypes.sizeof(paraminit)
+error_code = dcam.dcamapi_init(ctypes.byref(paraminit))
+if (error_code != DCAMERR_NOERROR):
+    raise DCAMException("DCAM initialization failed with error code " + str(error_code))
+
+n_cameras = paraminit.iDeviceCount
 
 class HCamData(object):
     """
