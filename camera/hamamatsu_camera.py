@@ -6,7 +6,7 @@
 #########################################################################################################
 
 Ctype interface for the Hamamatsu camera from the Zhuang Lab found on github.
-I tweaked it according to my needs.
+I modified it according to my needs.
 
 #########################################################################################################
 #########################################################################################################
@@ -209,8 +209,7 @@ class DCAMPROP_VALUETEXT(ctypes.Structure):
 
 def convertPropertyName(p_name):
     """
-    "Regularizes" a property name. We are using all lowercase names with
-    the spaces replaced by underscores.
+    "Regularizes" a property name. We are using all lowercase names with the spaces replaced by underscores.
     """
     return p_name.lower().replace(" ", "_")
 
@@ -222,25 +221,23 @@ def convertPropertyName(p_name):
  #
  # Initialization
  #
-dcam = ctypes.windll.dcamapi
-
-paraminit = DCAMAPI_INIT(0, 0, 0, 0, None, None)
-paraminit.size = ctypes.sizeof(paraminit)
-error_code = dcam.dcamapi_init(ctypes.byref(paraminit))
-if (error_code != DCAMERR_NOERROR):
-    raise DCAMException("DCAM initialization failed with error code " + str(error_code))
-
-n_cameras = paraminit.iDeviceCount
+# dcam = ctypes.windll.dcamapi
+#
+# paraminit = DCAMAPI_INIT(0, 0, 0, 0, None, None)
+# paraminit.size = ctypes.sizeof(paraminit)
+# error_code = dcam.dcamapi_init(ctypes.byref(paraminit))
+# if (error_code != DCAMERR_NOERROR):
+#     raise DCAMException("DCAM initialization failed with error code " + str(error_code))
+#
+# n_cameras = paraminit.iDeviceCount
 
 class HCamData(object):
     """
     Hamamatsu camera data object.
 
-    Initially I tried to use create_string_buffer() to allocate storage for the
-    data from the camera but this turned out to be too slow. The software
-    kept falling behind the camera and create_string_buffer() seemed to be the
-    bottleneck.
-
+    Initially I tried to use create_string_buffer() to allocate storage for the data from the camera
+    but this turned out to be too slow. The software kept falling behind the camera and create_string_buffer()
+    seemed to be the bottleneck.
     Using numpy makes a lot more sense anyways..
     """
     def __init__(self, size = None, **kwds):
@@ -256,8 +253,8 @@ class HCamData(object):
 
     def copyData(self, address):
         """
-        Uses the C memmove function to copy data from an address in memory
-        into memory allocated for the numpy array of this object.
+        Uses the C memmove function to copy data from an address in memory into memory allocated for the
+        numpy array of this object.
         """
         ctypes.memmove(self.np_array.ctypes.data, address, self.size)
 
@@ -271,17 +268,15 @@ class HCamData(object):
 class HamamatsuCamera(object):
     """
     Basic camera interface class.
-
-    This version uses the Hamamatsu library to allocate camera buffers.
-    Storage for the data from the camera is allocated dynamically and
-    copied out of the camera buffers.
+    This version uses the Hamamatsu library to allocate camera buffers. Storage for the data from the camera
+    is allocated dynamically and copied out of the camera buffers.
     """
     def __init__(self, camera_id = None, **kwds):
         """
         Open the connection to the camera specified by camera_id.
         """
         super().__init__(**kwds)
-
+        self.dcam = ctypes.windll.dcamapi
         self.buffer_index = 0
         self.camera_id = camera_id
         self.debug = False
@@ -293,10 +288,8 @@ class HamamatsuCamera(object):
         self.properties = None
         self.max_backlog = 0
         self.number_image_buffers = 0
-
         self.acquisition_mode = "run_till_abort"
         self.number_frames = 0
-
 
         # Get camera model.
         self.camera_model = self.getModelInfo(camera_id)
@@ -322,6 +315,17 @@ class HamamatsuCamera(object):
         self.max_width = self.getPropertyValue("image_width")[0]
         self.max_height = self.getPropertyValue("image_height")[0]
 
+    def initCam(self):
+        """
+        Initialize camera communication
+        """
+        paraminit = DCAMAPI_INIT(0, 0, 0, 0, None, None)
+        paraminit.size = ctypes.sizeof(paraminit)
+        error_code = dcam.dcamapi_init(ctypes.byref(paraminit))
+        if (error_code != DCAMERR_NOERROR):
+            raise DCAMException("DCAM initialization failed with error code " + str(error_code))
+        n_cameras = paraminit.iDeviceCount
+        return n_cameras
 
     def captureSetup(self):
         """
@@ -408,14 +412,12 @@ class HamamatsuCamera(object):
         """
         Gets all of the available frames.
 
-        This will block waiting for new frames even if
-        there new frames available when it is called.
+        This will block waiting for new frames even if there new frames available when it is called.
         """
         frames = []
         for n in self.newFrames():
 
-            paramlock = DCAMBUF_FRAME(
-                    0, 0, 0, n, None, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            paramlock = DCAMBUF_FRAME(0, 0, 0, n, None, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             paramlock.size = ctypes.sizeof(paramlock)
 
             # Lock the frame in the camera buffer & get address.
