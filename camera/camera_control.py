@@ -12,46 +12,70 @@ import os
 import time
 from threading import Thread
 
-import hamamatsu_camera as hc
+from camera.hamamatsu_camera import *
 
 
 
-class MainCamera(HamamatsuCameraMR):
+
+class MainCamera():
     def __init__(self):
-        self.camera_id = camera_id
-        self.camera_model = hc.HamamatsuCamera(camera_id=0)
-        self.hcam = hc.HamamatsuCameraMR(camera_id = 0)
+        self.init = initCam()
+        self.hcam = HamamatsuCameraMR(camera_id = 0)
 
         self.total_images = []
+        self.properties = self.hcam.getProperties()
 
     def start_acquisition(self):
         self.hcam.startAcquisition()
 
     def end_acquisition(self):
-        self. hcam.stopAcquisition()
+        self.hcam.stopAcquisition()
 
-    def stream_images(self, image):
+    def exposure(self, value):
+        self.hcam.setPropertyValue("exposure_time", value)
+
+    #### need to integrate the list of all the modifiable properties here ####
+
+    def stream_images(self):
+#        nb = 0
+#        start_time = time.time()
+#        for i in range(1000):
+        [frames, dims] = self.hcam.getFrames()
+        image = frames[0].getData()
+#            self.total_images.append(image)
+#        nb += 1
         image_reshaped = image.reshape(2048, 2048)
-        plt.imshow(image_reshaped, interpolation=None, cmap='gray')
-        plt.draw()
-        plt.pause(0.0001)
-        plt.clf()
 
-    def save_image(image, i):
-        image = aframe.getData()
-        np.save(file='image{}.npy'.format(str(i)), arr=image)
-
-    def open_saved(self):
-        os.chdir(os.getcwd() + '/Images/')
-        images_nb = len(os.listdir())
-        for i in range(images_nb):
-            image = np.load('image{}.npy'.format(str(i)))
-            Thread(target=stream_images(image))
-        plt.close()
+#            plt.imshow(image_reshaped, interpolation=None, cmap='gray')
+#            plt.draw()
+#            plt.pause(0.0001)
+#            plt.clf()
+        return image_reshaped
 
 
+    def save_image(self, image, i): ### npy format
+        for i in self.total_images:
+            image = self.total_images[i].getData()
+            np.save(file='image{}.npy'.format(str(i)), arr=image)
 
+#     def open_saved(self, path): ### open with pyplot
+#         path_files = path
+#         images_nb = len(os.listdir(path))
+#         images = []
+#         for i in range(images_nb):
+#             image = np.load(str(path_files) + 'image{}.npy'.format(str(i)))
+# #            Thread(target=self.stream_images(image))
+#             image_reshaped = image.reshape(2048, 2048)
+#             images.append(image_reshaped)
+# #        plt.close()
+#         return images
 
+if (__name__ == "__main__"):
+    #MainCamera().open_saved(path='/media/jeremy/Data/CloudStation/Postdoc/Project/Memory project/optopatch/equipment/camera/Images/')
+    cam = MainCamera()
+    cam.stream_images()
+#    cam.open_saved('C:\\Users\\barral\\Desktop\\camera\\data\\')
+    print("camera 0 model:", cam.hcam.getModelInfo(0))
 
 
 
