@@ -1,12 +1,12 @@
-
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar
 from PyQt5.QtGui import QImage
 import pyqtgraph as pg
+
 from threading import Thread
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import time
+import os, time
 
 from camera.camera_control import MainCamera
 
@@ -14,10 +14,6 @@ from camera.camera_control import MainCamera
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
   from PyQt5.QtCore import pyqtRemoveInputHook
-
-  # Or for Qt5
-  #from PyQt5.QtCore import pyqtRemoveInputHook
-
   from pdb import set_trace
   pyqtRemoveInputHook()
   set_trace()
@@ -26,9 +22,13 @@ def debug_trace():
 class StartWindow(QMainWindow):
     def __init__(self, camera=None):
         super().__init__()
+
+        ## organization
         self.central_widget = QWidget()
         self.layout = QVBoxLayout(self.central_widget)
         self.setCentralWidget(self.central_widget)
+        self.setGeometry(100, 100, 800, 800)
+
 
         self.stream_button = QPushButton('Stream', self.central_widget)
         self.layout.addWidget(self.stream_button)
@@ -38,103 +38,77 @@ class StartWindow(QMainWindow):
         self.layout.addWidget(self.replay_button)
         self.replay_button.clicked.connect(self.replay)
 
-        # self.display_image_widget = pg.ImageView()
-        # self.layout.addWidget(self.display_image_widget)
+        # self.progress = QProgressBar(self)
+        # self.replay_button.clicked.connect(self.progress)
 
-        self.canvas = pg.GraphicsLayoutWidget()
-        self.central_widget.layout().addWidget(self.canvas)
-        self.view = self.canvas.addViewBox()
-        self.img = pg.ImageItem(border='w')
-        self.view.addItem(self.img)
+        self.display_image_widget = pg.ImageView()
+        self.layout.addWidget(self.display_image_widget)
 
+        self.slider = QSlider(Qt.Horizontal)
+        self.slider.setRange(0,100)
+        self.layout.addWidget(self.slider)
+        self.slider.valueChanged.connect(self.exposure_time)
 
+        self.camera = MainCamera()
 
-    def stream(self):
-        # self.camera = MainCamera()
-        # self.camera.start_acquisition()
-#        image = np.random.normal(size=(15, 600, 600), loc=1024, scale=64).astype(np.uint16)
-#        start_time = time.time()
-        for _ in range(100):
-            self.image = np.random.rand(256, 256)
-            print(self.image)
-#            image = self.camera.stream_images()
-            self.img.setImage(self.image)
-            # self.img.setImage(self.image)
-            pg.QtGui.QApplication.processEvents()
+    def save(self, images, i, path): ### npy format
+        for y in range(len(images)):
+            image = images[y]
+            np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
+            print("saved file")
 
-        #     plt.imshow(image, interpolation=None, cmap='gray')
-        #     plt.draw()
-        #     plt.pause(0.0001)
-        #     plt.clf()
-        # plt.close()
-
-#            self.display_image_widget.imageItem(image)
-#            pg.ImageView.setImage(self, img = image.T)
-#            self.display_image_widget.getView()
-#            pg.ImageItem(self.camera.stream_images().T)
-        # self.camera.end_acquisition()
-
-    def open_saved(self, path):
-        path_files = path
-        images_nb = len(os.listdir(path))
-        images = []
-        for i in range(images_nb):
-            image = np.load(str(path_files) + 'image{}.npy'.format(str(i)))
-#            Thread(target=self.stream_images(image))
-            image_reshaped = image.reshape(2048, 2048)
-            images.append(image_reshaped)
-#        plt.close()
-        return images
+    def stream(self, simulated = False):
+        simulated = False
+        save = False
+        if simulated:
+            for i in range(100):
+                self.image = np.random.rand(256, 256)
+                self.display_image_widget.setImage(self.image.T)
+                pg.QtGui.QApplication.processEvents()
+        else:
+            self.camera.start_acquisition()
+            if save:
+                path = QFileDialog.getExistingDirectory(None, 'Select a folder for saving the files:', 'C:/Users/barral/Desktop/camera/data', QFileDialog.ShowDirsOnly)
+            for i in range(100):
+                self.images = self.camera.get_images() ## gettint the images, sometimes its one other can be more
+                print(self.images)
+                self.image = self.images[0]  ## keeping only the 1st for projetion
+                self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
+                self.display_image_widget.setImage(self.image_reshaped.T)
+                if save:
+                    print(self.images)
+                    self.save(self.images, i, path)   ## we want to save all the images not only the first of each import batches
+                pg.QtGui.QApplication.processEvents()
+            self.camera.end_acquisition()
 
     def replay(self):
-        images = self.open_saved(path='/media/jeremy/Data/CloudStation/Postdoc/Project/Memory project/optopatch/equipment/camera/Images/')
-        nb_frame = len(images)
-        # images = self.camera.open_saved('C:\\Users\\barral\\Desktop\\camera\\data\\')
-        start = time.time()
-        for img in images:
-            print(img)
-            img = img.reshape(2048, 2048)
-            self.display_image_widget.setImage(img.T)
-        #     plt.imshow(img, interpolation=None, cmap='gray')
-        #     plt.draw()
-        #     plt.pause(0.0001)
-        #     plt.clf()
-        # plt.close()
-        print (nb_frame/(time.time()-start))
+        path = QFileDialog.getExistingDirectory(None, 'Select a folder:', 'C:/', QFileDialog.ShowDirsOnly)
+        if path == None:
+            pass
+        else:
+            images_nb = len(os.listdir(path))
+            images = []
+            for i in range(images_nb):
+                image = np.load(str(path) + '/image{}.npy'.format(str(i)))
+                image_reshaped = image.reshape(2048, 2048)
+                images.append(image_reshaped)
+            for img in images:
+                print(img)
+                self.display_image_widget.setImage(img.T)
+                pg.QtGui.QApplication.processEvents()
 
+    def exposure_time(self, value):
+        value /= 10
+        self.camera.write_exposure(value)
+        print(self.camera.read_exposure())
+
+    def bye(self):
+        self.camera.shutdown()
+        # to finish
 
 if __name__ == '__main__':
-#    app = pg.mkQApp()
     app = QApplication([])
+    app.setStyle('Fusion')
     win = StartWindow()
-    win.setGeometry(100, 100, 800, 800)
     win.show()
     app.exit(app.exec_())
-
-
-
-
-
-
-
-#
-# import pyqtgraph as pg
-# from pyqtgraph.Qt import QtCore, QtGui
-#
-# os.chdir(os.getcwd() + '/Images/')
-# images_nb = len(os.listdir())
-# for i in range(images_nb):
-#     # i=i+1 i=1
-#     image = np.load('image{}.npy'.format(str(i)))
-#     pg.image(image.reshape(2048, 2048))
-#
-# image
-# image.reshape(2048,2048).shape
-# pg.image(image.reshape(2048,2048))
-#
-# pg.ImageView(image.reshape(2048, 2048))
-#
-#
-#
-# app = QtGui.QApplication([])
-# win = QtGui.QMainWindow()

@@ -14,15 +14,10 @@ from threading import Thread
 
 from camera.hamamatsu_camera import *
 
-
-
-
 class MainCamera():
     def __init__(self):
         self.init = initCam()
         self.hcam = HamamatsuCameraMR(camera_id = 0)
-
-        self.total_images = []
         self.properties = self.hcam.getProperties()
 
     def start_acquisition(self):
@@ -31,52 +26,65 @@ class MainCamera():
     def end_acquisition(self):
         self.hcam.stopAcquisition()
 
-    def exposure(self, value):
+    def shutdown(self):
+        self.hcam.shutdown()
+
+    def write_exposure(self, value):
         self.hcam.setPropertyValue("exposure_time", value)
 
-    #### need to integrate the list of all the modifiable properties here ####
+    def read_exposure(self):
+        return self.hcam.getPropertyValue("exposure_time")[0]
 
-    def stream_images(self):
-#        nb = 0
-#        start_time = time.time()
-#        for i in range(1000):
+    def write_binning(self, value):
+        return self.hcam.setPropertyValue("binning", value) ## value can be 1, 2 or 4
+
+    def read_binning(self):
+        return self.hcam.getProperties("binning")[0]
+
+    def write_sensor_mode(self, value):
+        self.hcam.setPropertyValue("sensor_mode", value) ##value can be 1, 12, 14, 16
+
+    def read_sensor_mode(self):
+        self.hcam.getProperties("sensor_mode")[0]
+
+    def write_subarray_mode(self, value):
+        self.hcam.setPropertyValue("subarray_mode", value)  ###1 OFF or 2 ON
+
+    def read_subarray_mode(self):
+        self.hcam.getProperties("subarray_mode")[0]
+
+    def write_subarray_size(self, value_hpos, value_hsize, value_vpos, value_vsize):
+        self.hcam.setPropertyValue("hpos", value_hpos)
+        self.hcam.setPropertyValue("hsize", value_hsize)
+        self.hcam.setPropertyValue("vpos", value_vpos)
+        self.hcam.setPropertyValue("vsize", value_vsize)
+
+    def get_subarray_size(self):
+        hpos = self.hcam.getProperties("hpos")
+        hsize = self.hcam.getProperties("hsize")
+        vpos = self.hcam.getProperties("vpos")
+        vsize = self.hcam.getProperties("vsize")
+        return hpos, hsize, vpos, vsize
+
+
+
+    def get_images(self):
         [frames, dims] = self.hcam.getFrames()
-        image = frames[0].getData()
-#            self.total_images.append(image)
-#        nb += 1
-        image_reshaped = image.reshape(2048, 2048)
-
-#            plt.imshow(image_reshaped, interpolation=None, cmap='gray')
-#            plt.draw()
-#            plt.pause(0.0001)
-#            plt.clf()
-        return image_reshaped
+        images = []
+        for i in range(len(frames)):
+            image = frames[i].getData()
+            images.append(image)
+        return images
 
 
-    def save_image(self, image, i): ### npy format
-        for i in self.total_images:
-            image = self.total_images[i].getData()
-            np.save(file='image{}.npy'.format(str(i)), arr=image)
 
-#     def open_saved(self, path): ### open with pyplot
-#         path_files = path
-#         images_nb = len(os.listdir(path))
-#         images = []
-#         for i in range(images_nb):
-#             image = np.load(str(path_files) + 'image{}.npy'.format(str(i)))
-# #            Thread(target=self.stream_images(image))
-#             image_reshaped = image.reshape(2048, 2048)
-#             images.append(image_reshaped)
-# #        plt.close()
-#         return images
+
 
 if (__name__ == "__main__"):
-    #MainCamera().open_saved(path='/media/jeremy/Data/CloudStation/Postdoc/Project/Memory project/optopatch/equipment/camera/Images/')
     cam = MainCamera()
-    cam.stream_images()
-#    cam.open_saved('C:\\Users\\barral\\Desktop\\camera\\data\\')
     print("camera 0 model:", cam.hcam.getModelInfo(0))
-
+#    cam.hcam.getPropertyValue("exposure_time")
+#    cam.read_exposure()
 
 
 """
