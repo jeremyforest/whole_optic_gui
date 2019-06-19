@@ -2,12 +2,25 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar
 from PyQt5.QtGui import QImage
 import pyqtgraph as pg
+from PyQt5.QtTest import QTest
+
 
 import numpy as np
 import os, time, sys, time
 
 from whole_optic_gui import *
 from camera.camera_control import MainCamera
+
+
+def debug_trace():
+  '''Set a tracepoint in the Python debugger that works with Qt'''
+  from PyQt5.QtCore import pyqtRemoveInputHook
+  from pdb import set_trace
+  pyqtRemoveInputHook()
+  set_trace()
+  
+  
+  
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -23,7 +36,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ## variable reference for later use
         self.path = None
-
+        self.save_images = False
+        self.simulated = False
 
         ## folder widget
         self.change_folder_button.clicked.connect(self.change_folder)
@@ -73,38 +87,55 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def stream(self):       ## stream images in continuous flow
-        simulated = True
-        if simulated:
-            self.image = np.random.rand(256, 256)
-            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
-            timer.timeout.connect(self.update)
-            timer.start(0.01)
-        else:
-            self.cam.start_acquisition()
-            self.images = self.cam.get_images() ## gettint the images, sometimes its one other can be more
-            self.image = self.images[0]  ## keeping only the 1st for projetion
-            self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
-            timer = pg.QtCore.QTimer(self)
-            timer.timeout.connect(self.update)
-            timer.start(0.01)
-            self.cam.end_acquisition()
-
-    def update(self):  ## need to put that in its own thread
-        simulated = True
-        if self.saving_check == Qt.Checked:
-            save_images = True
-        if simulated:
+        if self.simulated:
             for i in range(50):
                 self.image = np.random.rand(256, 256)
+                
+    #            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
+    #            timer.timeout.connect(self.update)
+    #            timer.start(0.01)
                 self.graphicsView.setImage(self.image)
-                if save_images:
-                    self.save(self.images, i, self.path)
+                pg.QtGui.QApplication.processEvents()
+
         else:
-            for i in range(100):
-                self.images = self.cam.get_images() ## gettint the images, it can be 1 but also many images grabbed at once
-                self.image = self.images[0]  ## keeping only the 1st image for projection
+            self.cam.start_acquisition()
+            for i in range(1000):
+            
+                self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
+                if self.images == []:
+                    QTest.qWait(500)
+                    self.images = self.cam.get_images()
+                self.image = self.images[0]  ## keeping only the 1st for projetion
                 self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
+                    
+            ### the timer makes it impossible to get new images for whatever reason, when end_acquisition is here and when I
+            ### remove it it works but super slow
+#            timer = pg.QtCore.QTimer(self)
+#            timer.timeout.connect(self.update)
+#            timer.start(0.01)
+            
                 self.graphicsView.setImage(self.image_reshaped)
+                pg.QtGui.QApplication.processEvents()
+#                self.save(self.images, i, self.path)
+            
+            self.cam.end_acquisition()
+
+#    def update(self):  ## need to put that in its own thread
+#        simulated = False
+##        if self.saving_check == Qt.Checked:
+##            save_images = True
+#        if simulated:
+#            for i in range(50):
+#                self.image = np.random.rand(256, 256)
+#                self.graphicsView.setImage(self.image)
+##                if save_images:
+##                    self.save(self.images, i, self.path)
+#        else:
+#            for i in range(50):
+#                self.images = self.cam.get_images() ## gettint the images, it can be 1 but also many images grabbed at once
+#                self.image = self.images[0]  ## keeping only the 1st image for projection
+#                self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
+#                self.graphicsView.setImage(self.image_reshaped)
 
     def save(self, images, i, path): ### npy format
         for y in range(len(images)):
@@ -113,22 +144,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             print("saved file")
 
     def replay(self):
-        if path == None:
+        if self.path == None:
             print("select a folder first")
         else:
             images_nb = len(os.listdir(self.path))
             images = []
             for i in range(images_nb):
-                image = np.load(str(eslf.path) + '/image{}.npy'.format(str(i)))
+                image = np.load(str(self.path) + '/image{}.npy'.format(str(i)))
                 image_reshaped = image.reshape(2048, 2048)
                 images.append(image_reshaped)
             for img in images:
-                print(img)
                 self.graphicsView.setImage(img.T)
                 pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in ints own thread with the update function ?
 
     def exposure_time(self, value):
-        value /= 10
+        value /= 100
         self.cam.write_exposure(value)
         read_value = self.cam.read_exposure()
         self.exposure_time_value.display(read_value)

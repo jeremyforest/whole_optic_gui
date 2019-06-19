@@ -2,14 +2,6 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>1205</width>
-    <height>799</height>
-   </rect>
-  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -19,8 +11,8 @@
      <rect>
       <x>10</x>
       <y>80</y>
-      <width>701</width>
-      <height>671</height>
+      <width>1091</width>
+      <height>781</height>
      </rect>
     </property>
     <property name="font">
@@ -37,8 +29,8 @@
       <rect>
        <x>20</x>
        <y>40</y>
-       <width>671</width>
-       <height>481</height>
+       <width>1041</width>
+       <height>651</height>
       </rect>
      </property>
     </widget>
@@ -71,8 +63,8 @@
     <widget class="QLabel" name="exposure_time_label">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>530</y>
+       <x>50</x>
+       <y>710</y>
        <width>81</width>
        <height>16</height>
       </rect>
@@ -97,8 +89,8 @@
     <widget class="QScrollBar" name="exposure_time_bar">
      <property name="geometry">
       <rect>
-       <x>180</x>
-       <y>530</y>
+       <x>220</x>
+       <y>710</y>
        <width>261</width>
        <height>20</height>
       </rect>
@@ -144,8 +136,8 @@
     <widget class="QProgressBar" name="progress_bar">
      <property name="geometry">
       <rect>
-       <x>150</x>
-       <y>590</y>
+       <x>730</x>
+       <y>740</y>
        <width>291</width>
        <height>16</height>
       </rect>
@@ -163,8 +155,8 @@
     <widget class="QLabel" name="loading_saving_label">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>590</y>
+       <x>590</x>
+       <y>740</y>
        <width>131</width>
        <height>20</height>
       </rect>
@@ -176,8 +168,8 @@
     <widget class="QLCDNumber" name="exposure_time_value">
      <property name="geometry">
       <rect>
-       <x>110</x>
-       <y>530</y>
+       <x>150</x>
+       <y>710</y>
        <width>64</width>
        <height>23</height>
       </rect>
@@ -195,8 +187,8 @@
     <widget class="QComboBox" name="binning_combo_box">
      <property name="geometry">
       <rect>
-       <x>100</x>
-       <y>560</y>
+       <x>140</x>
+       <y>750</y>
        <width>77</width>
        <height>22</height>
       </rect>
@@ -217,8 +209,8 @@
     <widget class="QLabel" name="binning_label">
      <property name="geometry">
       <rect>
-       <x>30</x>
-       <y>570</y>
+       <x>70</x>
+       <y>760</y>
        <width>52</width>
        <height>14</height>
       </rect>
@@ -230,8 +222,8 @@
     <widget class="QRadioButton" name="radioButton">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>640</y>
+       <x>630</x>
+       <y>760</y>
        <width>121</width>
        <height>20</height>
       </rect>
@@ -243,8 +235,8 @@
     <widget class="QLabel" name="subarray_label">
      <property name="geometry">
       <rect>
-       <x>140</x>
-       <y>640</y>
+       <x>750</x>
+       <y>760</y>
        <width>291</width>
        <height>16</height>
       </rect>
@@ -256,8 +248,8 @@
     <widget class="QLabel" name="current_binning_size_label">
      <property name="geometry">
       <rect>
-       <x>190</x>
-       <y>560</y>
+       <x>230</x>
+       <y>750</y>
        <width>121</width>
        <height>16</height>
       </rect>
@@ -269,8 +261,8 @@
     <widget class="QLabel" name="current_binning_size_label_2">
      <property name="geometry">
       <rect>
-       <x>310</x>
-       <y>560</y>
+       <x>340</x>
+       <y>750</y>
        <width>121</width>
        <height>16</height>
       </rect>
@@ -283,8 +275,8 @@
    <widget class="QFrame" name="controls">
     <property name="geometry">
      <rect>
-      <x>800</x>
-      <y>20</y>
+      <x>1240</x>
+      <y>10</y>
       <width>311</width>
       <height>411</height>
      </rect>
@@ -420,8 +412,8 @@
    <widget class="QFrame" name="laser">
     <property name="geometry">
      <rect>
-      <x>850</x>
-      <y>440</y>
+      <x>1310</x>
+      <y>430</y>
       <width>231</width>
       <height>141</height>
      </rect>
@@ -880,8 +872,8 @@
    <widget class="QFrame" name="dlp">
     <property name="geometry">
      <rect>
-      <x>720</x>
-      <y>610</y>
+      <x>1110</x>
+      <y>620</y>
       <width>471</width>
       <height>141</height>
      </rect>
@@ -1000,8 +992,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1205</width>
-     <height>19</height>
+     <width>1577</width>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">
