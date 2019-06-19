@@ -2,6 +2,20 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1621</width>
+    <height>922</height>
+   </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -407,6 +421,19 @@
        </widget>
       </item>
      </layout>
+    </widget>
+    <widget class="QPushButton" name="stop_mouvment_button">
+     <property name="geometry">
+      <rect>
+       <x>180</x>
+       <y>30</y>
+       <width>80</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>STOP</string>
+     </property>
     </widget>
    </widget>
    <widget class="QFrame" name="laser">
@@ -862,6 +889,9 @@
       <string>Laser</string>
      </property>
      <property name="checkable">
+      <bool>true</bool>
+     </property>
+     <property name="checked">
       <bool>false</bool>
      </property>
      <property name="flat">
@@ -897,8 +927,8 @@
     <widget class="QPushButton" name="save_ROI_button">
      <property name="geometry">
       <rect>
-       <x>30</x>
-       <y>30</y>
+       <x>190</x>
+       <y>60</y>
        <width>80</width>
        <height>21</height>
       </rect>
@@ -915,6 +945,29 @@
        <width>171</width>
        <height>111</height>
       </rect>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="display_internal_pattern_combobox">
+     <property name="geometry">
+      <rect>
+       <x>20</x>
+       <y>60</y>
+       <width>77</width>
+       <height>22</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="internal_patterns_label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>40</y>
+       <width>101</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Internal patterns</string>
      </property>
     </widget>
    </widget>
@@ -992,8 +1045,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1577</width>
-     <height>21</height>
+     <width>1621</width>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">

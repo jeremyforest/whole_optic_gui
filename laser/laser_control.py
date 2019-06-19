@@ -6,22 +6,27 @@ Created on Fri Jun 14 04:18:45 2019
 """
 import time
 import numpy as np
-from laser_interface import Laser
+from laser.laser_interface import Laser
 
-class MainLaser():
+class CrystalLaser():
 	def __init__(self):
 		super().__init__()
 		self.laser = Laser()
-		self.laser.connect()
 		self.pulse = np.zeros(1, dtype=np.uint8)
-		
+
+	def connect(self):
+		self.laser.connect()
+
+	def disconnect(self):
+		self.laser.disconnect()
+
 	def turn_on(self):
 		self.pulse[0]=1
 		self.task.WriteDigitalLines(1, 1, 5.0, self.PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse, None, None)
-		
+
 	def turn_off(self):
 		self.pulse[0]=0
-		self.task.WriteDigitalLines(1, 1, 5.0, self.PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse , None, None)		
+		self.task.WriteDigitalLines(1, 1, 5.0, self.PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse , None, None)
 
 
 	# a finir
@@ -33,11 +38,8 @@ class MainLaser():
 			self.pulse[0]=abs(self.pulse[0]-1)
 
 
-# a mettre dans le quit
-#self.task.StopTask()
-
-
 if __name__ == "__main__":
-	laser = MainLaser()
+	laser = CrystalLaser()
+	laser.connect()
 	laser.turn_on()
 	laser.turn_off()

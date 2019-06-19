@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '.\whole_optic_gui.ui'
+# Form implementation generated from reading ui file 'whole_optic_gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.9.2
 #
@@ -11,6 +11,12 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
+        MainWindow.resize(1621, 922)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
+        MainWindow.setSizePolicy(sizePolicy)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.camera = QtWidgets.QFrame(self.centralwidget)
@@ -158,6 +164,9 @@ class Ui_MainWindow(object):
         self.z_axis_down.setSizePolicy(sizePolicy)
         self.z_axis_down.setObjectName("z_axis_down")
         self.verticalLayout.addWidget(self.z_axis_down)
+        self.stop_mouvment_button = QtWidgets.QPushButton(self.controls)
+        self.stop_mouvment_button.setGeometry(QtCore.QRect(180, 30, 80, 21))
+        self.stop_mouvment_button.setObjectName("stop_mouvment_button")
         self.laser = QtWidgets.QFrame(self.centralwidget)
         self.laser.setGeometry(QtCore.QRect(1310, 430, 231, 141))
         self.laser.setFrameShape(QtWidgets.QFrame.Box)
@@ -304,7 +313,8 @@ class Ui_MainWindow(object):
         brush.setStyle(QtCore.Qt.SolidPattern)
         palette.setBrush(QtGui.QPalette.Disabled, QtGui.QPalette.ToolTipText, brush)
         self.laser_on_button.setPalette(palette)
-        self.laser_on_button.setCheckable(False)
+        self.laser_on_button.setCheckable(True)
+        self.laser_on_button.setChecked(False)
         self.laser_on_button.setFlat(False)
         self.laser_on_button.setObjectName("laser_on_button")
         self.dlp = QtWidgets.QFrame(self.centralwidget)
@@ -315,11 +325,17 @@ class Ui_MainWindow(object):
         self.dlp_label.setGeometry(QtCore.QRect(10, 10, 31, 16))
         self.dlp_label.setObjectName("dlp_label")
         self.save_ROI_button = QtWidgets.QPushButton(self.dlp)
-        self.save_ROI_button.setGeometry(QtCore.QRect(30, 30, 80, 21))
+        self.save_ROI_button.setGeometry(QtCore.QRect(190, 60, 80, 21))
         self.save_ROI_button.setObjectName("save_ROI_button")
         self.saved_ROI_image = QtWidgets.QGraphicsView(self.dlp)
         self.saved_ROI_image.setGeometry(QtCore.QRect(280, 20, 171, 111))
         self.saved_ROI_image.setObjectName("saved_ROI_image")
+        self.display_internal_pattern_combobox = QtWidgets.QComboBox(self.dlp)
+        self.display_internal_pattern_combobox.setGeometry(QtCore.QRect(20, 60, 77, 22))
+        self.display_internal_pattern_combobox.setObjectName("display_internal_pattern_combobox")
+        self.internal_patterns_label = QtWidgets.QLabel(self.dlp)
+        self.internal_patterns_label.setGeometry(QtCore.QRect(10, 40, 101, 16))
+        self.internal_patterns_label.setObjectName("internal_patterns_label")
         self.folder = QtWidgets.QFrame(self.centralwidget)
         self.folder.setGeometry(QtCore.QRect(10, 20, 771, 41))
         self.folder.setFrameShape(QtWidgets.QFrame.Box)
@@ -339,7 +355,7 @@ class Ui_MainWindow(object):
         self.current_folder_label_2.setObjectName("current_folder_label_2")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1577, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1621, 19))
         self.menubar.setObjectName("menubar")
         self.menuMenu = QtWidgets.QMenu(self.menubar)
         self.menuMenu.setObjectName("menuMenu")
@@ -377,10 +393,12 @@ class Ui_MainWindow(object):
         self.microscope_control_label.setText(_translate("MainWindow", "Microscope control"))
         self.z_axis_up.setText(_translate("MainWindow", "Z axis UP"))
         self.z_axis_down.setText(_translate("MainWindow", "Z axis DOWN"))
+        self.stop_mouvment_button.setText(_translate("MainWindow", "STOP"))
         self.laser_label.setText(_translate("MainWindow", "Laser"))
         self.laser_on_button.setText(_translate("MainWindow", "Laser"))
         self.dlp_label.setText(_translate("MainWindow", "DLP"))
         self.save_ROI_button.setText(_translate("MainWindow", "Save ROI"))
+        self.internal_patterns_label.setText(_translate("MainWindow", "Internal patterns"))
         self.change_folder_button.setText(_translate("MainWindow", "Change Folder"))
         self.initialize_experiment_button.setText(_translate("MainWindow", "Initialize Experiment"))
         self.current_folder_label.setText(_translate("MainWindow", "Current Folder:"))

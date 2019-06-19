@@ -10,6 +10,9 @@ import os, time, sys, time
 
 from whole_optic_gui import *
 from camera.camera_control import MainCamera
+from dlp.dlp_control import Dlp
+from laser.laser_control import CrystalLaser
+from controler.manipulator_command import Scope
 
 
 def debug_trace():
@@ -18,9 +21,7 @@ def debug_trace():
   from pdb import set_trace
   pyqtRemoveInputHook()
   set_trace()
-  
-  
-  
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -28,11 +29,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.retranslateUi(self)
 
-        ##camera initilization
+        ###################################
+        ##### hardware initialization #####
+        ###################################
+
+        ##### camera #####
         if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
             self.cam = MainCamera()
         else:
             print("Main camera / Hamamatsu camera will not work")
+        ##### dlp #####
+        self.dlp = Dlp()
+        self.dlp.connect()
+        ##### laser #####
+        self.laser = Laser()
+        self.laser.connect()
+        ##### manipulator #####
+        self.scope = Scope()
 
         ## variable reference for later use
         self.path = None
@@ -54,6 +67,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.binning_combo_box.addItem("4x4", 4)
         self.binning_combo_box.activated.connect(self.binning)
 
+        ## dlp widget
+        self.display_internal_pattern_combobox.addItem("blue", 4)
+        self.display_internal_pattern_combobox.addItem("black", 1)
+        self.binning_combo_box.activated.connect(self.internal_test_pattern)
+
+        ## laser widget
+        self.laser_on_button.clicked.connect(self.laser_on_off)
+
+        ## scope widget
+        self.x_axisleft_button.clicked.connect(self.left)
+        self.x_axis_right_button.clicked.connect(self.right)
+        self.y_axis_backward_button.clicked.connect(self.backward)
+        self.y_axis_forward_button.clicked.connect(self.forward)
+        self.z_axis_up.clicked.connect(self.up)
+        self.z_axis_down.clicked.connect(self.down)
+        self.stop_mouvment_button.connect(self.stop_mouvement)
+
+        ## menu bar connection
         self.actionQuit.triggered.connect(self.bye)
 
     def change_folder(self):
@@ -90,7 +121,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.simulated:
             for i in range(50):
                 self.image = np.random.rand(256, 256)
-                
+
     #            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
     #            timer.timeout.connect(self.update)
     #            timer.start(0.01)
@@ -100,24 +131,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.cam.start_acquisition()
             for i in range(1000):
-            
+
                 self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
                 if self.images == []:
                     QTest.qWait(500)
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
                 self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
-                    
+
             ### the timer makes it impossible to get new images for whatever reason, when end_acquisition is here and when I
             ### remove it it works but super slow
 #            timer = pg.QtCore.QTimer(self)
 #            timer.timeout.connect(self.update)
 #            timer.start(0.01)
-            
+
                 self.graphicsView.setImage(self.image_reshaped)
                 pg.QtGui.QApplication.processEvents()
 #                self.save(self.images, i, self.path)
-            
+
             self.cam.end_acquisition()
 
 #    def update(self):  ## need to put that in its own thread
@@ -171,8 +202,57 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if index == 4:
             self.cam.write_binning(4)
 
+
+    ####################
+    ##### DLP part #####
+    ####################
+
+    def internal_test_pattern(self, index):
+        if index == 1:
+            self.dlp.turn_off_light()
+        if index == 4:
+            self.dlp.turn_on_blue()
+
+    ####################
+    #### Laser part ####
+    ####################
+    def laser_on_off(self):
+        if self.laser_on_button.Checked == False:
+            self.laser.turn_on()
+        elif self.laser_on_button.Checked == True:
+            self.laser.turn_off()
+
+    #######################
+    #### Contrler part ####
+    #######################
+    def left(self):
+        self.scope.move_left()
+
+    def right(self):
+        self.scope.move_right()
+
+    def backward(self):
+        self.scope.move_backward()
+
+    def forward(self):
+        self.scope.move_forward()
+
+    def up(self):
+        self.scope.up()
+
+    def down(self):
+        self.scope.down()
+
+    def stop_mouvement():
+        self.scope.stop_mouvement()
+
+    ####################
+    #### Clean exit ####
+    ####################
     def bye(self):
         self.cam.shutdown()
+        self.dlp.disconnect()
+        self.laser.disconnect()
         sys.exit()
 
 
