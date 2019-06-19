@@ -39,34 +39,32 @@ class MainCamera():
         return self.hcam.setPropertyValue("binning", value) ## value can be 1, 2 or 4
 
     def read_binning(self):
-        return self.hcam.getProperties("binning")[0]
+        return self.hcam.getPropertyValue("binning")[0]
 
     def write_sensor_mode(self, value):
         self.hcam.setPropertyValue("sensor_mode", value) ##value can be 1, 12, 14, 16
 
     def read_sensor_mode(self):
-        self.hcam.getProperties("sensor_mode")[0]
+        return self.hcam.getPropertyValue("sensor_mode")[0]
 
     def write_subarray_mode(self, value):
         self.hcam.setPropertyValue("subarray_mode", value)  ###1 OFF or 2 ON
 
     def read_subarray_mode(self):
-        self.hcam.getProperties("subarray_mode")[0]
+        return self.hcam.getPropertyValue("subarray_mode")[0]
 
     def write_subarray_size(self, value_hpos, value_hsize, value_vpos, value_vsize):
-        self.hcam.setPropertyValue("hpos", value_hpos)
-        self.hcam.setPropertyValue("hsize", value_hsize)
-        self.hcam.setPropertyValue("vpos", value_vpos)
-        self.hcam.setPropertyValue("vsize", value_vsize)
+        self.hcam.setPropertyValue("subarray_hpos", value_hpos)
+        self.hcam.setPropertyValue("subarray_hsize", value_hsize)
+        self.hcam.setPropertyValue("subarray_vpos", value_vpos)
+        self.hcam.setPropertyValue("subarray_vsize", value_vsize)
 
     def get_subarray_size(self):
-        hpos = self.hcam.getProperties("hpos")
-        hsize = self.hcam.getProperties("hsize")
-        vpos = self.hcam.getProperties("vpos")
-        vsize = self.hcam.getProperties("vsize")
+        hpos = self.hcam.getPropertyValue("subarray_hpos")[0]
+        hsize = self.hcam.getPropertyValue("subarray_hsize")[0]
+        vpos = self.hcam.getPropertyValue("subarray_vpos")[0]
+        vsize = self.hcam.getPropertyValue("subarray_vsize")[0]
         return hpos, hsize, vpos, vsize
-
-
 
     def get_images(self):
         [frames, dims] = self.hcam.getFrames()

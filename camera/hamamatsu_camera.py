@@ -941,12 +941,12 @@ def initCam():
 # Testing.
 #
 if (__name__ == "__main__"):
- 
+
     n_cameras = initCam()
     print("found:", n_cameras, "cameras")
     if (n_cameras > 0):
         hcam = HamamatsuCameraMR(camera_id = 0)
-        print(hcam.setPropertyValue("defect_correct_mode", 1))
+        # print(hcam.setPropertyValue("defect_correct_mode", 1))
         print("camera 0 model:", hcam.getModelInfo(0))
 
          # List support properties.

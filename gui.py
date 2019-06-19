@@ -3,7 +3,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout,
 from PyQt5.QtGui import QImage
 import pyqtgraph as pg
 
-from threading import Thread
 import numpy as np
 import matplotlib.pyplot as plt
 import os, time
@@ -68,7 +67,7 @@ class StartWindow(QMainWindow):
         else:
             self.camera.start_acquisition()
             if save:
-                path = QFileDialog.getExistingDirectory(None, 'Select a folder for saving the files:', 'C:/Users/barral/Desktop/camera/data', QFileDialog.ShowDirsOnly)
+                path = QFileDialog.getxistingDirectory(None, 'Select a folder for saving the files:', 'C:/Users/barral/Desktop/camera/data', QFileDialog.ShowDirsOnly)
             for i in range(100):
                 self.images = self.camera.get_images() ## gettint the images, sometimes its one other can be more
                 print(self.images)
@@ -79,6 +78,19 @@ class StartWindow(QMainWindow):
                     print(self.images)
                     self.save(self.images, i, path)   ## we want to save all the images not only the first of each import batches
                 pg.QtGui.QApplication.processEvents()
+
+                axes = (0, 1)
+                data, coords = self.display_image_widget.roi.getArrayRegion(self.image_reshaped.view(),
+                                                                            self.display_image_widget.imageItem,
+                                                                            axes, returnMappedCoords=True)
+                debug_trace()
+#                roi = pg.ROI([0,0],[1,1],pen=pg.mkPen('r',width=2))
+#                self.display_image_widget.addItem(roi)
+#                def getcoordinates(roi):
+#                    data2,xdata = roi.getArrayRegion(self.image_reshaped,self.display_image_widget.imageItem,returnMappedCoords=True)
+#                    print(xdata)
+#                roi.sigRegionChanged.connect(getcoordinates)
+
             self.camera.end_acquisition()
 
     def replay(self):
