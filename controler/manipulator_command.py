@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from luigsneumann_SM5_modified import LuigsNeumann_SM5
+from controler.luigsneumann_SM5_modified import LuigsNeumann_SM5
 
 class Scope():
 	def __init__(self):
@@ -24,7 +24,7 @@ class Scope():
 	def down(self):
 		self.scope.relative_move(-5.,2)
 
-	def stop_mouvement(self)
+	def stop_mouvment(self):
 		self.scope.stop()
 
 

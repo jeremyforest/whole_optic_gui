@@ -2,7 +2,7 @@
 The SerialDevice class:
 a device that communicates through the serial port.
 """
-from device import Device
+from controler.device import Device
 import serial
 import ctypes
 from serial.tools import list_ports

@@ -42,7 +42,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.dlp = Dlp()
         self.dlp.connect()
         ##### laser #####
-        self.laser = Laser()
+        self.laser = CrystalLaser()
         self.laser.connect()
         ##### manipulator #####
         self.scope = Scope()
@@ -73,7 +73,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.binning_combo_box.activated.connect(self.internal_test_pattern)
 
         ## laser widget
-        self.laser_on_button.clicked.connect(self.laser_on_off)
+        self.laser_on_button.clicked.connect(self.laser_on)
+        self.laser_off_button.clicked.connect(self.laser_off)
+
 
         ## scope widget
         self.x_axisleft_button.clicked.connect(self.left)
@@ -216,11 +218,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
     #### Laser part ####
     ####################
-    def laser_on_off(self):
-        if self.laser_on_button.Checked == False:
-            self.laser.turn_on()
-        elif self.laser_on_button.Checked == True:
-            self.laser.turn_off()
+    def laser_on(self):
+        self.laser.turn_on()
+    def laser_off(self):
+        self.laser.turn_off()
 
     #######################
     #### Contrler part ####

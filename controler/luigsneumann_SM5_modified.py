@@ -10,7 +10,7 @@ Device class for the Luigs and Neumann SM-5 manipulator controller.
 Adapted from Michael Graupner's LandNSM5 class.
 
 """
-from serialdevice import SerialDevice
+from controler.serialdevice import SerialDevice
 import serial
 import binascii
 import time
