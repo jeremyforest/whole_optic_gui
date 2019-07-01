@@ -21,3 +21,12 @@ class Dlp():
 
 	def disconnect(self):
 		self.dlp.close()
+
+
+
+if __name__ == "__main__":
+	dlp = Dlp()
+	dlp.connect()
+	dlp.turn_on_blue()
+	dlp.turn_off_light()
+	dlp.disconnect()

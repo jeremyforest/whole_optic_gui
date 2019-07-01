@@ -8,8 +8,8 @@ from PyQt5.QtTest import QTest
 import numpy as np
 import os, time, sys, time
 
-from whole_optic_gui import *
-from camera.camera_control import MainCamera
+from whole_optic_gui import Ui_MainWindow
+#from camera.camera_control import MainCamera
 from dlp.dlp_control import Dlp
 from laser.laser_control import CrystalLaser
 from controler.manipulator_command import Scope
@@ -34,16 +34,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ###################################
 
         ##### camera #####
-        if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
-            self.cam = MainCamera()
-        else:
-            print("Main camera / Hamamatsu camera will not work")
+       if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
+           self.cam = MainCamera()
+       else:
+           print("Main camera / Hamamatsu camera will not work")
         ##### dlp #####
         self.dlp = Dlp()
         self.dlp.connect()
         ##### laser #####
-        self.laser = CrystalLaser()
-        self.laser.connect()
+       self.laser = CrystalLaser()
+       self.laser.connect()
         ##### manipulator #####
         self.scope = Scope()
 
@@ -61,16 +61,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.saving_check.stateChanged.connect(self.save)
         self.replay_button.clicked.connect(self.replay)
         self.exposure_time_bar.valueChanged.connect(self.exposure_time)
-
-        self.binning_combo_box.addItem("1x1", 1)
-        self.binning_combo_box.addItem("2x2", 2)
-        self.binning_combo_box.addItem("4x4", 4)
         self.binning_combo_box.activated.connect(self.binning)
 
         ## dlp widget
-        self.display_internal_pattern_combobox.addItem("blue", 4)
-        self.display_internal_pattern_combobox.addItem("black", 1)
-        self.binning_combo_box.activated.connect(self.internal_test_pattern)
+        self.display_internal_pattern_combobox.activated.connect(self.internal_test_pattern)
 
         ## laser widget
         self.laser_on_button.clicked.connect(self.laser_on)
@@ -78,13 +72,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
         ## scope widget
-        self.x_axisleft_button.clicked.connect(self.left)
+        self.x_axis_left_button.clicked.connect(self.left)
         self.x_axis_right_button.clicked.connect(self.right)
         self.y_axis_backward_button.clicked.connect(self.backward)
         self.y_axis_forward_button.clicked.connect(self.forward)
         self.z_axis_up.clicked.connect(self.up)
         self.z_axis_down.clicked.connect(self.down)
-        self.stop_mouvment_button.connect(self.stop_mouvement)
+        self.stop_mouvment_button.clicked.connect(self.stop_mouvment)
 
         ## menu bar connection
         self.actionQuit.triggered.connect(self.bye)
@@ -210,10 +204,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
 
     def internal_test_pattern(self, index):
-        if index == 1:
+		### these indexes are the ones in the gui file at the end
+        if index == 0:
+            pass
+        elif index == 2:
             self.dlp.turn_off_light()
-        if index == 4:
+        elif index == 1:
             self.dlp.turn_on_blue()
+
+
 
     ####################
     #### Laser part ####
@@ -244,8 +243,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def down(self):
         self.scope.down()
 
-    def stop_mouvement():
-        self.scope.stop_mouvement()
+    def stop_mouvment(self):
+        self.scope.stop_mouvment()
 
     ####################
     #### Clean exit ####

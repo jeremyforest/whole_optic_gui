@@ -11,9 +11,9 @@ import math
 
 #####################################
 #####################################
-class dm365:
+class dm365():
 	def __init__(self):
-		self.s =   socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 	def connect(self, testFlag =0):
 	    """ Connecting call it giving the argument 1 if you want to connect a  local host."""
