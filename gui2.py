@@ -9,10 +9,8 @@ import numpy as np
 import os, time, sys, time
 
 from whole_optic_gui import Ui_MainWindow
-#from camera.camera_control import MainCamera
-from dlp.dlp_control import Dlp
-from laser.laser_control import CrystalLaser
-from controler.manipulator_command import Scope
+import argparse
+
 
 
 def debug_trace():
@@ -33,19 +31,59 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ##### hardware initialization #####
         ###################################
 
+        ## commande-line options
+        self.activate_camera = False
+        self.activate_laser = False
+        self.activate_dlp = False
+        self.activate_controller = False
+
+        parser = argparse.ArgumentParser(description="hardware to load")
+        parser.add_argument("--camera", default=False, action="store_true" , help="if you want to load the camera functions")
+        parser.add_argument("--laser", default=False, action="store_true" , help="if you want to load the laser functions")
+        parser.add_argument("--dlp", default=False, action="store_true" , help="if you want to load the dlp functions")
+        parser.add_argument("--controler", default=False, action="store_true" , help="if you want to load the controller functions")
+        args = parser.parse_args()
+
+        if args.camera is True:
+            self.activate_camera = True
+        else:
+             print("camera function are not loaded")
+
+        if args.laser is True:
+            self.activate_laser = True
+        else:
+             print("laser function are not loaded")
+
+        if args.dlp is True:
+            self.activate_dlp = True
+        else:
+             print("dlp function are not loaded")
+
+        if args.controler is True:
+            self.activate_controller = True
+        else:
+             print("controler function are not loaded")
+
+
         ##### camera #####
-       if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
-           self.cam = MainCamera()
-       else:
-           print("Main camera / Hamamatsu camera will not work")
+        if self.activate_camera is True:
+            from camera.camera_control import MainCamera
+            self.cam = MainCamera()
         ##### dlp #####
-        self.dlp = Dlp()
-        self.dlp.connect()
+        if self.activate_dlp is True:
+            from dlp.dlp_control import Dlp
+            self.dlp = Dlp()
+            self.dlp.connect()
         ##### laser #####
-       self.laser = CrystalLaser()
-       self.laser.connect()
+        if self.activate_laser is True:
+            from laser.laser_control import CrystalLaser
+            self.laser = CrystalLaser()
+            self.laser.connect()
+
         ##### manipulator #####
-        self.scope = Scope()
+        if self.activate_controller is True:
+            from controler.manipulator_command import Scope
+            self.scope = Scope()
 
         ## variable reference for later use
         self.path = None
@@ -223,7 +261,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.laser.turn_off()
 
     #######################
-    #### Contrler part ####
+    #### Controler part ####
     #######################
     def left(self):
         self.scope.move_left()
@@ -250,9 +288,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #### Clean exit ####
     ####################
     def bye(self):
-        self.cam.shutdown()
-        self.dlp.disconnect()
-        self.laser.disconnect()
+        if self.activate_camera is True:
+            self.cam.shutdown()
+        if self.activate_laser is True:
+            self.laser.disconnect()
+        if self.activate_dlp is True:
+            self.dlp.disconnect()
+        if self.activate_controller is True:
+            pass
         sys.exit()
 
 
