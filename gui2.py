@@ -1,6 +1,6 @@
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar
-from PyQt5.QtGui import QImage
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene
+from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 import pyqtgraph as pg
 from PyQt5.QtTest import QTest
 
@@ -9,10 +9,10 @@ import numpy as np
 import os, time, sys, time
 
 from whole_optic_gui import Ui_MainWindow
-#from camera.camera_control import MainCamera
-from dlp.dlp_control import Dlp
-from laser.laser_control import CrystalLaser
-from controler.manipulator_command import Scope
+# from camera.camera_control import MainCamera
+# from dlp.dlp_control import Dlp
+# from laser.laser_control import CrystalLaser
+# from controler.manipulator_command import Scope
 
 
 def debug_trace():
@@ -34,23 +34,25 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ###################################
 
         ##### camera #####
-       if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
-           self.cam = MainCamera()
-       else:
-           print("Main camera / Hamamatsu camera will not work")
-        ##### dlp #####
-        self.dlp = Dlp()
-        self.dlp.connect()
-        ##### laser #####
-       self.laser = CrystalLaser()
-       self.laser.connect()
-        ##### manipulator #####
-        self.scope = Scope()
+        # if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
+        #    self.cam = MainCamera()
+        # else:
+        #    print("Main camera / Hamamatsu camera will not work")
+        # ##### dlp #####
+        # self.dlp = Dlp()
+        # self.dlp.connect()
+        # ##### laser #####
+        # self.laser = CrystalLaser()
+        # self.laser.connect()
+        # ##### manipulator #####
+        # self.scope = Scope()
 
         ## variable reference for later use
         self.path = None
         self.save_images = False
-        self.simulated = False
+        self.simulated = True
+        self.roi_list = []
+
 
         ## folder widget
         self.change_folder_button.clicked.connect(self.change_folder)
@@ -63,13 +65,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.exposure_time_bar.valueChanged.connect(self.exposure_time)
         self.binning_combo_box.activated.connect(self.binning)
 
+        #roi
+        self.save_ROI_button.clicked.connect(self.roi)
+        self.reset_ROI_button.clicked.connect(self.reset_roi)
+
+        self.saved_ROI_image.ui.histogram.hide()
+        self.saved_ROI_image.ui.roiBtn.hide()
+        self.saved_ROI_image.ui.menuBtn.hide()
+
         ## dlp widget
-        self.display_internal_pattern_combobox.activated.connect(self.internal_test_pattern)
+        self.display_mode_combobox.activated.connect(self.display_mode)
+        self.display_mode_subbox_combobox.activated.connect(self.choose_projection)
 
         ## laser widget
         self.laser_on_button.clicked.connect(self.laser_on)
         self.laser_off_button.clicked.connect(self.laser_off)
-
 
         ## scope widget
         self.x_axis_left_button.clicked.connect(self.left)
@@ -115,9 +125,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def stream(self):       ## stream images in continuous flow
         if self.simulated:
-            for i in range(50):
+            for i in range(500):
                 self.image = np.random.rand(256, 256)
-
+                self.image_reshaped = self.image
     #            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
     #            timer.timeout.connect(self.update)
     #            timer.start(0.01)
@@ -130,7 +140,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
                 if self.images == []:
-                    QTest.qWait(500)
+                    QTest.qWait(500) ## temporary hack - doesn't really work for long exposure time
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
                 self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
@@ -146,6 +156,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 #                self.save(self.images, i, self.path)
 
             self.cam.end_acquisition()
+
+    def roi(self):
+        axes = (0, 1)
+        self.saved_ROI_image.setImage(self.image_reshaped) ## get the image into the ROI graphic interface
+
+        # data, coords = self.graphicsView.roi.getArrayRegion(self.image_reshaped.view(), self.graphicsView.imageItem, axes, returnMappedCoords=True) ## get the roi data and coords
+        # self.roi_list.append(coords)
+
+        roi_state = self.graphicsView.roi.getState()
+        self.roi_list.append(roi_state)
+
+        pen = QPen(Qt.red, 0.1) ## draw on the image to represent the roi
+        for nb in range(len(self.roi_list)):
+            r = pg.ROI(pos = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1]), \
+                                size= (self.roi_list[nb]['size'][0], self.roi_list[nb]['size'][1]), \
+                                angle = self.roi_list[nb]['angle'], pen=pen, movable=False, removable=False)
+            self.saved_ROI_image.getView().addItem(r)
+        self.ROI_label_placeholder.setText(str(len(self.roi_list)))
+
+    def reset_roi(self):
+        self.saved_ROI_image.getView().clear()
+        self.roi_list = []
+        self.ROI_label_placeholder.setText(str(0))
 
 #    def update(self):  ## need to put that in its own thread
 #        simulated = False
@@ -203,15 +236,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ##### DLP part #####
     ####################
 
-    def internal_test_pattern(self, index):
-		### these indexes are the ones in the gui file at the end
+    def display_mode(self, index):
+        self.display_mode_subbox_combobox.clear()
         if index == 0:
-            pass
-        elif index == 2:
-            self.dlp.turn_off_light()
-        elif index == 1:
-            self.dlp.turn_on_blue()
+            self.display_mode_subbox_combobox.addItem('Choose Static Image')
+        if index == 1:
+            self.display_mode_subbox_combobox.addItems  (['Solid Blue', 'Solid Black', 'ANSI 4×4 Checkerboard'])
+        if index == 2:
+            self.display_mode_subbox_combobox.addItem('Choose HDMI Video Sequence')
+        if index == 3:
+            self.display_mode_subbox_combobox.addItems(['Generate Pattern Sequence', 'Choose Pattern Sequence To Load'])
 
+
+    def choose_projection(self, index):
+        ## Static image mode
+        if self.display_mode_combobox.currentIndex() == 0:
+            if index == 0:
+                img_path = QFileDialog.getExistingDirectory(None, 'Select the image to load', 'C:/' , QFileDialog.ShowDirsOnly)
+        ## Internal test pattern mode
+        elif self.display_mode_combobox.currentIndex() == 1:
+            # in order:
+            if index == 0:  #solid blue
+                self.dlp.turn_on_blue()
+            if index == 1: # solid black
+                self.dlp.turn_off_light()
+            if index == 2: ## ANSI 4×4 Checkerboard
+                print('not implemented yet')
+
+        ## Pattern sequence mode
+        elif self.display_mode_combobox.currentIndex() == 2:
+            if index == 0: # Generate Pattern Sequence
+                pass
+            if index == 1: # Choose Pattern Sequence To Load
+                pass
 
 
     ####################
@@ -222,9 +279,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def laser_off(self):
         self.laser.turn_off()
 
-    #######################
-    #### Contrler part ####
-    #######################
+    ########################
+    #### Controler part ####
+    ########################
     def left(self):
         self.scope.move_left()
 
@@ -250,12 +307,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #### Clean exit ####
     ####################
     def bye(self):
-        self.cam.shutdown()
-        self.dlp.disconnect()
-        self.laser.disconnect()
+        # self.cam.shutdown()
+        # self.dlp.disconnect()
+        # self.laser.disconnect()
         sys.exit()
-
-
 
 
 def main():

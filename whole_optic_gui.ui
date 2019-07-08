@@ -26,7 +26,7 @@
       <x>10</x>
       <y>80</y>
       <width>1091</width>
-      <height>781</height>
+      <height>801</height>
      </rect>
     </property>
     <property name="font">
@@ -1355,9 +1355,9 @@
     <property name="geometry">
      <rect>
       <x>1110</x>
-      <y>620</y>
-      <width>471</width>
-      <height>141</height>
+      <y>580</y>
+      <width>501</width>
+      <height>301</height>
      </rect>
     </property>
     <property name="frameShape">
@@ -1379,8 +1379,8 @@
     <widget class="QPushButton" name="save_ROI_button">
      <property name="geometry">
       <rect>
-       <x>190</x>
-       <y>60</y>
+       <x>210</x>
+       <y>240</y>
        <width>80</width>
        <height>21</height>
       </rect>
@@ -1389,52 +1389,118 @@
       <string>Save ROI</string>
      </property>
     </widget>
-    <widget class="QGraphicsView" name="saved_ROI_image">
+    <widget class="QComboBox" name="display_mode_subbox_combobox">
      <property name="geometry">
       <rect>
-       <x>280</x>
-       <y>20</y>
-       <width>171</width>
-       <height>111</height>
+       <x>10</x>
+       <y>80</y>
+       <width>141</width>
+       <height>22</height>
       </rect>
      </property>
     </widget>
-    <widget class="QComboBox" name="display_internal_pattern_combobox">
+    <widget class="Custom_pyqtgraph_widget" name="saved_ROI_image">
      <property name="geometry">
       <rect>
-       <x>20</x>
-       <y>60</y>
-       <width>77</width>
+       <x>160</x>
+       <y>10</y>
+       <width>331</width>
+       <height>221</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QLabel" name="ROI_label">
+     <property name="geometry">
+      <rect>
+       <x>310</x>
+       <y>260</y>
+       <width>52</width>
+       <height>14</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>ROI</string>
+     </property>
+    </widget>
+    <widget class="QLabel" name="ROI_label_placeholder">
+     <property name="geometry">
+      <rect>
+       <x>340</x>
+       <y>250</y>
+       <width>41</width>
+       <height>41</height>
+      </rect>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="text">
+      <string>ROI number saved</string>
+     </property>
+     <property name="scaledContents">
+      <bool>true</bool>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="reset_ROI_button">
+     <property name="geometry">
+      <rect>
+       <x>210</x>
+       <y>270</y>
+       <width>80</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Reset ROI</string>
+     </property>
+    </widget>
+    <widget class="QComboBox" name="display_mode_combobox">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>50</y>
+       <width>141</width>
        <height>22</height>
       </rect>
      </property>
      <item>
       <property name="text">
-       <string>Nothing</string>
+       <string>Static Image</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Blue</string>
+       <string>Internal Test Pattern</string>
       </property>
      </item>
      <item>
       <property name="text">
-       <string>Black</string>
+       <string>HDMI Video Input</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Pattern Sequence Display</string>
       </property>
      </item>
     </widget>
-    <widget class="QLabel" name="internal_patterns_label">
+    <widget class="QLabel" name="display_mode_label_2">
      <property name="geometry">
       <rect>
-       <x>10</x>
-       <y>40</y>
-       <width>101</width>
+       <x>40</x>
+       <y>30</y>
+       <width>81</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
-      <string>Internal patterns</string>
+      <string>Display Mode</string>
      </property>
     </widget>
    </widget>
@@ -1513,7 +1579,7 @@
      <x>0</x>
      <y>0</y>
      <width>1621</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">
