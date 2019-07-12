@@ -7,6 +7,7 @@ from PyQt5.QtTest import QTest
 
 import numpy as np
 import os, time, sys, time
+from PIL import Image
 
 from whole_optic_gui import Ui_MainWindow
 # from camera.camera_control import MainCamera
@@ -75,7 +76,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ## dlp widget
         self.display_mode_combobox.activated.connect(self.display_mode)
-        self.display_mode_subbox_combobox.activated.connect(self.choose_projection)
+        self.display_mode_subbox_combobox.activated.connect(self.choose_action)
 
         ## laser widget
         self.laser_on_button.clicked.connect(self.laser_on)
@@ -120,7 +121,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ##get camera parameters     ## get camera parameters to show up in the GUI at initialization
         ## binning, exposure time, array size    what else ?
-
+        ## current dlp dsplay mode
+        ## laser state
 
 
     def stream(self):       ## stream images in continuous flow
@@ -215,7 +217,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 images.append(image_reshaped)
             for img in images:
                 self.graphicsView.setImage(img.T)
-                pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in ints own thread with the update function ?
+                pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in its own thread with the update function ?
 
     def exposure_time(self, value):
         value /= 100
@@ -235,24 +237,43 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
     ##### DLP part #####
     ####################
+    def calibration(self):
+        ## will ask for the calibration image
+        calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")
+        calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
+        ## projecting with the dlp, then getting the camera image and performing the calculs to get the transformation matrix
+        self.dlp.display_static_image(calibration_image_path[0])
+
+
+        ## dlp img array
+        calibration_image = Image.open(calibration_image_path)
+        image_arr = np.asarray(calibration_image, dtype=np.uint8)
+
+
+
 
     def display_mode(self, index):
         self.display_mode_subbox_combobox.clear()
-        if index == 0:
+        if index == 0: # static image
+            self.dlp.set_display_mode('static')
             self.display_mode_subbox_combobox.addItem('Choose Static Image')
-        if index == 1:
+        if index == 1: # internal test pattern
+            self.dlp.set_display_mode('internal')
             self.display_mode_subbox_combobox.addItems  (['Solid Blue', 'Solid Black', 'ANSI 4×4 Checkerboard'])
-        if index == 2:
+        if index == 2: # hdmi video input
             self.display_mode_subbox_combobox.addItem('Choose HDMI Video Sequence')
-        if index == 3:
+        if index == 3: # pattern sequence display
+            self.dlp.set_display_mode('pattern')
             self.display_mode_subbox_combobox.addItems(['Generate Pattern Sequence', 'Choose Pattern Sequence To Load'])
 
-
-    def choose_projection(self, index):
+    def choose_action(self, index):
         ## Static image mode
         if self.display_mode_combobox.currentIndex() == 0:
             if index == 0:
-                img_path = QFileDialog.getExistingDirectory(None, 'Select the image to load', 'C:/' , QFileDialog.ShowDirsOnly)
+                img_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
+                img = Image.open(img_path[0])
+                self.dlp.display_static_image(img)
+
         ## Internal test pattern mode
         elif self.display_mode_combobox.currentIndex() == 1:
             # in order:
@@ -261,12 +282,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if index == 1: # solid black
                 self.dlp.turn_off_light()
             if index == 2: ## ANSI 4×4 Checkerboard
-                print('not implemented yet')
+                self.dlp.checkerboard()
+
+        # HDMI Video Input
+        elif self.display_mode_combobox.currentIndex == 2:
+            pass
 
         ## Pattern sequence mode
-        elif self.display_mode_combobox.currentIndex() == 2:
+        elif self.display_mode_combobox.currentIndex() == 3:
             if index == 0: # Generate Pattern Sequence
-                pass
+
+                file_out = "test1.bmp"
+                img.save(file_out)
+
             if index == 1: # Choose Pattern Sequence To Load
                 pass
 

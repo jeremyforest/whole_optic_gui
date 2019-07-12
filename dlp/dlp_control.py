@@ -13,11 +13,33 @@ class Dlp():
 	def connect(self):
 		self.dlp.connect()
 
+	def get_display_mode(self):
+		self.dlp.getDisplayMode()
+
+	def set_display_mode(self, mode):
+		if mode == 'static':
+			self.dlp.setModeToStaticImage()
+		elif mode == 'internal':
+			self.dlp.setModeToInternalTestPattern()
+		elif mode == 'pattern':
+			self.dlp.setModeToPatternSequenceDisplay()
+
+	## internal patterns that are usefull
 	def turn_on_blue(self):
 		self.dlp.displayInternalTestPattern(4)
 
 	def turn_off_light(self):
 		self.dlp.displayInternalTestPattern(1)
+
+	def checkerboard(self):
+		self.dlp.displayInternalTestPattern(14)
+
+
+	## static images
+	def display_static_image(self, file_path):
+		self.dlp.displayStaticImage(file_path)
+
+
 
 	def disconnect(self):
 		self.dlp.close()

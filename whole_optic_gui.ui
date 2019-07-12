@@ -917,7 +917,7 @@
      <property name="geometry">
       <rect>
        <x>20</x>
-       <y>50</y>
+       <y>60</y>
        <width>111</width>
        <height>21</height>
       </rect>
@@ -1393,7 +1393,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>80</y>
+       <y>120</y>
        <width>141</width>
        <height>22</height>
       </rect>
@@ -1464,7 +1464,7 @@
      <property name="geometry">
       <rect>
        <x>10</x>
-       <y>50</y>
+       <y>90</y>
        <width>141</width>
        <height>22</height>
       </rect>
@@ -1493,14 +1493,46 @@
     <widget class="QLabel" name="display_mode_label_2">
      <property name="geometry">
       <rect>
-       <x>40</x>
-       <y>30</y>
-       <width>81</width>
-       <height>16</height>
+       <x>10</x>
+       <y>40</y>
+       <width>141</width>
+       <height>31</height>
       </rect>
      </property>
      <property name="text">
-      <string>Display Mode</string>
+      <string>Current Display Mode</string>
+     </property>
+     <property name="scaledContents">
+      <bool>true</bool>
+     </property>
+     <property name="wordWrap">
+      <bool>true</bool>
+     </property>
+    </widget>
+    <widget class="QGraphicsView" name="dlp_projection_view">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>220</y>
+       <width>141</width>
+       <height>71</height>
+      </rect>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="calibration_button">
+     <property name="geometry">
+      <rect>
+       <x>60</x>
+       <y>10</y>
+       <width>80</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="toolTip">
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Calibrate the DLP/Camera images with their respective resolutions so that ROI designed from the camera interface can be projected with the DLP &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="text">
+      <string>Calibration</string>
      </property>
     </widget>
    </widget>
@@ -1579,7 +1611,7 @@
      <x>0</x>
      <y>0</y>
      <width>1621</width>
-     <height>19</height>
+     <height>17</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">
