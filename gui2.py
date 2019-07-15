@@ -152,10 +152,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def snap_image(self):
         self.cam.start_acquisition()
-        self.images = self.cam.get_images()
+        self.images.self.cam.get_images()
         self.image = self.images
         self.image_reshaped = self.image.reshape(2048, 2048)
-        self.graphicsView.setImage(self.image_reshaped)
         image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
         self.save_as_png(self.image, image_name)
 
