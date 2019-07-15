@@ -1,12 +1,12 @@
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QInputDialog
 from PyQt5.QtGui import QImage
 import pyqtgraph as pg
 from PyQt5.QtTest import QTest
 
-
 import numpy as np
 import os, time, sys, time
+import matplotlib.pyplot as plt
 
 from whole_optic_gui import Ui_MainWindow
 import argparse
@@ -87,16 +87,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ## variable reference for later use
         self.path = None
-        self.save_images = False
-        self.simulated = False
+        self.simulated = True
 
         ## folder widget
         self.change_folder_button.clicked.connect(self.change_folder)
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
 
         #camera widget
+        self.snap_image_button.clicked.connect(self.snap_image)
         self.stream_button.clicked.connect(self.stream)
-        # self.saving_check.stateChanged.connect(self.save)
         self.replay_button.clicked.connect(self.replay)
         self.exposure_time_bar.valueChanged.connect(self.exposure_time)
         self.binning_combo_box.activated.connect(self.binning)
@@ -148,30 +147,42 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ##get camera parameters     ## get camera parameters to show up in the GUI at initialization
         ## binning, exposure time, array size    what else ?
+    def save_as_png(self, array, image_name):
+        plt.imsave('{}{}.png'.format(self.path, image_name), array)
+
+    def snap_image(self):
+        self.cam.start_acquisition()
+        self.images.self.cam.get_images()
+        self.image = self.images
+        self.image_reshaped = self.image.reshape(2048, 2048)
+        image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
+        self.save_as_png(self.image, image_name)
 
 
-
-    def stream(self):       ## stream images in continuous flow
+    def stream(self):
         if self.simulated:
-            for i in range(50):
+            for i in range(10):
                 self.image = np.random.rand(256, 256)
 
     #            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
     #            timer.timeout.connect(self.update)
     #            timer.start(0.01)
+
                 self.graphicsView.setImage(self.image)
                 pg.QtGui.QApplication.processEvents()
+
+                if self.saving_check.isChecked():
+                    self.save(self.image, i, self.path)
 
         else:
             self.cam.start_acquisition()
             for i in range(1000):
-
                 self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
                 if self.images == []:
-                    QTest.qWait(500)
+                    QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
-                self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
+                self.image_reshaped = self.image.reshape(2048, 2048) ## image needs reshaping for show
 
             ### the timer makes it impossible to get new images for whatever reason, when end_acquisition is here and when I
             ### remove it it works but super slow
@@ -181,7 +192,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 self.graphicsView.setImage(self.image_reshaped)
                 pg.QtGui.QApplication.processEvents()
-#                self.save(self.images, i, self.path)
+
+                if self.saving_check.isChecked():
+                    self.save(self.images, i, self.path)
 
             self.cam.end_acquisition()
 
@@ -205,7 +218,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def save(self, images, i, path): ### npy format
         for y in range(len(images)):
             image = images[y]
-            np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
+            np.save(file = str(path) + '/image{}_{}.npy'.format(str(i), str(y)), arr=image)
             print("saved file")
 
     def replay(self):

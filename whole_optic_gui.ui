@@ -80,7 +80,7 @@
        <x>50</x>
        <y>710</y>
        <width>81</width>
-       <height>16</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -93,7 +93,7 @@
        <x>10</x>
        <y>10</y>
        <width>81</width>
-       <height>16</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -150,8 +150,8 @@
     <widget class="QProgressBar" name="progress_bar">
      <property name="geometry">
       <rect>
-       <x>730</x>
-       <y>740</y>
+       <x>770</x>
+       <y>710</y>
        <width>291</width>
        <height>16</height>
       </rect>
@@ -169,14 +169,14 @@
     <widget class="QLabel" name="loading_saving_label">
      <property name="geometry">
       <rect>
-       <x>590</x>
-       <y>740</y>
-       <width>131</width>
-       <height>20</height>
+       <x>710</x>
+       <y>699</y>
+       <width>51</width>
+       <height>31</height>
       </rect>
      </property>
      <property name="text">
-      <string>Loading / Saving video</string>
+      <string>Progress</string>
      </property>
     </widget>
     <widget class="QLCDNumber" name="exposure_time_value">
@@ -239,9 +239,9 @@
      <property name="geometry">
       <rect>
        <x>70</x>
-       <y>760</y>
+       <y>743</y>
        <width>52</width>
-       <height>14</height>
+       <height>31</height>
       </rect>
      </property>
      <property name="text">
@@ -251,8 +251,8 @@
     <widget class="QRadioButton" name="radioButton">
      <property name="geometry">
       <rect>
-       <x>630</x>
-       <y>760</y>
+       <x>640</x>
+       <y>750</y>
        <width>121</width>
        <height>20</height>
       </rect>
@@ -264,14 +264,17 @@
     <widget class="QLabel" name="subarray_label">
      <property name="geometry">
       <rect>
-       <x>750</x>
-       <y>760</y>
+       <x>760</x>
+       <y>750</y>
        <width>291</width>
        <height>16</height>
       </rect>
      </property>
      <property name="text">
       <string>subarray size and origin</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
      </property>
     </widget>
     <widget class="QLabel" name="current_binning_size_label">
@@ -280,7 +283,7 @@
        <x>230</x>
        <y>750</y>
        <width>121</width>
-       <height>16</height>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
@@ -290,14 +293,30 @@
     <widget class="QLabel" name="current_binning_size_label_2">
      <property name="geometry">
       <rect>
-       <x>340</x>
+       <x>370</x>
        <y>750</y>
-       <width>121</width>
-       <height>16</height>
+       <width>91</width>
+       <height>21</height>
       </rect>
      </property>
      <property name="text">
       <string>None</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QPushButton" name="snap_image_button">
+     <property name="geometry">
+      <rect>
+       <x>590</x>
+       <y>10</y>
+       <width>80</width>
+       <height>21</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Snap image</string>
      </property>
     </widget>
    </widget>
@@ -1443,7 +1462,7 @@
      <rect>
       <x>10</x>
       <y>20</y>
-      <width>771</width>
+      <width>1091</width>
       <height>41</height>
      </rect>
     </property>
@@ -1479,7 +1498,7 @@
     <widget class="QLabel" name="current_folder_label">
      <property name="geometry">
       <rect>
-       <x>360</x>
+       <x>390</x>
        <y>10</y>
        <width>91</width>
        <height>16</height>
@@ -1492,9 +1511,9 @@
     <widget class="QLabel" name="current_folder_label_2">
      <property name="geometry">
       <rect>
-       <x>460</x>
+       <x>430</x>
        <y>5</y>
-       <width>301</width>
+       <width>651</width>
        <height>31</height>
       </rect>
      </property>
@@ -1502,6 +1521,12 @@
       <string>None</string>
      </property>
      <property name="scaledContents">
+      <bool>true</bool>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+     <property name="wordWrap">
       <bool>true</bool>
      </property>
     </widget>
@@ -1513,7 +1538,7 @@
      <x>0</x>
      <y>0</y>
      <width>1621</width>
-     <height>21</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">
