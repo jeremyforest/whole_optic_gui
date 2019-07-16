@@ -147,8 +147,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ##get camera parameters     ## get camera parameters to show up in the GUI at initialization
         ## binning, exposure time, array size    what else ?
+
+
     def save_as_png(self, array, image_name):
-        plt.imsave('{}{}.png'.format(self.path, image_name), array)
+        plt.imsave('{}{}.png'.format(self.path, image_name), array, cmap='gray')
 
     def snap_image(self):
         self.cam.start_acquisition()
@@ -157,7 +159,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.image_reshaped = self.image.reshape(2048, 2048)
         image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
         self.save_as_png(self.image, image_name)
-
 
     def stream(self):
         if self.simulated:
