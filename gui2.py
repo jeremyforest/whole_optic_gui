@@ -1,15 +1,20 @@
+## PyQT5
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 import pyqtgraph as pg
 from PyQt5.QtTest import QTest
+from whole_optic_gui import Ui_MainWindow
 
-
+## common dependencies
 import numpy as np
 import os, time, sys, time
-from PIL import Image
+from PIL import Image, ImageDraw
+import cv2
+import matplotlib.pyplot as plt
 
-from whole_optic_gui import Ui_MainWindow
+# own scripts
+import clickable_matplotlib_graph
 # from camera.camera_control import MainCamera
 # from dlp.dlp_control import Dlp
 # from laser.laser_control import CrystalLaser
@@ -53,6 +58,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.save_images = False
         self.simulated = True
         self.roi_list = []
+        self.dlp_transformation_matrix = []
 
 
         ## folder widget
@@ -77,6 +83,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## dlp widget
         self.display_mode_combobox.activated.connect(self.display_mode)
         self.display_mode_subbox_combobox.activated.connect(self.choose_action)
+        self.calibration_button.clicked.connect(self.calibration)
 
         ## laser widget
         self.laser_on_button.clicked.connect(self.laser_on)
@@ -167,6 +174,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.roi_list.append(coords)
 
         roi_state = self.graphicsView.roi.getState()
+        print(roi_state)
         self.roi_list.append(roi_state)
 
         pen = QPen(Qt.red, 0.1) ## draw on the image to represent the roi
@@ -239,24 +247,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
     def calibration(self):
         ## will ask for the calibration image
-        calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")
+        # calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")
         calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
-        ## projecting with the dlp, then getting the camera image and performing the calculs to get the transformation matrix
-        self.dlp.display_static_image(calibration_image_path[0])
-
-
-        ## dlp img array
+        ## dlp img
         calibration_image = Image.open(calibration_image_path)
-        image_arr = np.asarray(calibration_image, dtype=np.uint8)
-
-
-
+        dlp_image = np.asarray(calibration_image, dtype=np.uint8)
+        graph = clickable_matplotlib_graph.Clickable_matplotlib_graph(calibration_image_path)
+        coords_points_calib_dlp = graph.getCoord()
+        ## projecting the calibration image with the dlp to get the camera image
+        self.dlp.display_static_image(calibration_image_path[0])
+        camera_image = self.cam.get_images()[0].reshape(2048,2048)
+        graph = clickable_matplotlib_graph.Clickable_matplotlib_graph(camera_image)
+        coords_points_calib_camera = graph.getCoord()
+        ## performing the calculs to get the transformation matrix
+        self.dlp_transformation_matrix = cv2.getPerspectiveTransform(coords_points_calib_camera,coords_points_calib_dlp)
+        return self.dlp_transformation_matrix
 
     def display_mode(self, index):
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
             self.dlp.set_display_mode('static')
             self.display_mode_subbox_combobox.addItem('Choose Static Image')
+            self.display_mode_subbox_combobox.addItem('Generate Static Image from ROI')
         if index == 1: # internal test pattern
             self.dlp.set_display_mode('internal')
             self.display_mode_subbox_combobox.addItems  (['Solid Blue', 'Solid Black', 'ANSI 4×4 Checkerboard'])
@@ -268,14 +280,29 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def choose_action(self, index):
         ## Static image mode
-        if self.display_mode_combobox.currentIndex() == 0:
-            if index == 0:
+        if self.display_mode_combobox.currentIndex() == 0: ## static image
+            if index == 0: ## choose static image
                 img_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
                 img = Image.open(img_path[0])
+                if img.shape == (608, 684):
+                    self.dlp.display_static_image(img)
+                else:
+                    cv2.warpPerspective(img, self.dlp_transformation_matrix,(608, 684))
+                    self.dlp.display_static_image(img)
+            elif index == 1:
+                ##generate static image from ROI
+                black_image = Image.new('1', (2048,2048), color=0)
+                black_image_with_ROI = black_image
+                for nb in range(len(self.roi_list)):
+                    x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
+                    x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
+                    draw = ImageDraw.Draw(black_image_with_ROI)
+                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
+                cv2.warpPerspective(black_image_with_ROI, self.dlp_transformation_matrix,(608, 684))
                 self.dlp.display_static_image(img)
 
         ## Internal test pattern mode
-        elif self.display_mode_combobox.currentIndex() == 1:
+        elif self.display_mode_combobox.currentIndex() == 1: ## internal test pattern
             # in order:
             if index == 0:  #solid blue
                 self.dlp.turn_on_blue()
@@ -285,12 +312,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.dlp.checkerboard()
 
         # HDMI Video Input
-        elif self.display_mode_combobox.currentIndex == 2:
-            pass
+        elif self.display_mode_combobox.currentIndex == 2:  ## HDMI video sequence
+            print("mode not yet implemented")
 
         ## Pattern sequence mode
-        elif self.display_mode_combobox.currentIndex() == 3:
+        elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
             if index == 0: # Generate Pattern Sequence
+                black_image = np.zeros((2048, 2048))
 
                 file_out = "test1.bmp"
                 img.save(file_out)
