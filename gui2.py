@@ -247,8 +247,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
     def calibration(self):
         ## will ask for the calibration image
-        # calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")
-        calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
+        calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
+        # calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
         ## dlp img
         calibration_image = Image.open(calibration_image_path)
         dlp_image = np.asarray(calibration_image, dtype=np.uint8)
