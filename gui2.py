@@ -12,14 +12,12 @@ from whole_optic_gui import Ui_MainWindow
 import argparse
 
 
-
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
   from PyQt5.QtCore import pyqtRemoveInputHook
   from pdb import set_trace
   pyqtRemoveInputHook()
   set_trace()
-
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -64,7 +62,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
              print("controler function are not loaded")
 
-
         ##### camera #####
         if self.activate_camera is True:
             from camera.camera_control import MainCamera
@@ -79,11 +76,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             from laser.laser_control import CrystalLaser
             self.laser = CrystalLaser()
             self.laser.connect()
-
         ##### manipulator #####
         if self.activate_controller is True:
             from controler.manipulator_command import Scope
             self.scope = Scope()
+
 
         ## variable reference for later use
         self.path = None
@@ -106,7 +103,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## laser widget
         self.laser_on_button.clicked.connect(self.laser_on)
         self.laser_off_button.clicked.connect(self.laser_off)
-
 
         ## scope widget
         self.x_axis_left_button.clicked.connect(self.left)
@@ -157,6 +153,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.images.self.cam.get_images()
         self.image = self.images
         self.image_reshaped = self.image.reshape(2048, 2048)
+        self.graphicsView.setImage(self.image_reshaped)
         image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
         self.save_as_png(self.image, image_name)
 
@@ -171,55 +168,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
                 self.graphicsView.setImage(self.image)
                 pg.QtGui.QApplication.processEvents()
-
-                if self.saving_check.isChecked():
-                    self.save(self.image, i, self.path)
-
         else:
             self.cam.start_acquisition()
             for i in range(1000):
                 self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
-                if self.images == []:
+                while self.images == []:
                     QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
                 self.image_reshaped = self.image.reshape(2048, 2048) ## image needs reshaping for show
-
-            ### the timer makes it impossible to get new images for whatever reason, when end_acquisition is here and when I
-            ### remove it it works but super slow
-#            timer = pg.QtCore.QTimer(self)
-#            timer.timeout.connect(self.update)
-#            timer.start(0.01)
-
+                for j in range(len(self.images)): ## for saving later
+                    self.image_list.append(self.images[i])
                 self.graphicsView.setImage(self.image_reshaped)
                 pg.QtGui.QApplication.processEvents()
-
-                if self.saving_check.isChecked():
-                    self.save(self.images, i, self.path)
-
             self.cam.end_acquisition()
 
-#    def update(self):  ## need to put that in its own thread
-#        simulated = False
-##        if self.saving_check == Qt.Checked:
-##            save_images = True
-#        if simulated:
-#            for i in range(50):
-#                self.image = np.random.rand(256, 256)
-#                self.graphicsView.setImage(self.image)
-##                if save_images:
-##                    self.save(self.images, i, self.path)
-#        else:
-#            for i in range(50):
-#                self.images = self.cam.get_images() ## gettint the images, it can be 1 but also many images grabbed at once
-#                self.image = self.images[0]  ## keeping only the 1st image for projection
-#                self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
-#                self.graphicsView.setImage(self.image_reshaped)
+        if self.saving_check.isChecked():
+            self.save(self.image_list, self.path)
 
-    def save(self, images, i, path): ### npy format
-        for y in range(len(images)):
-            image = images[y]
-            np.save(file = str(path) + '/image{}_{}.npy'.format(str(i), str(y)), arr=image)
+    def save(self, images, path): ### npy format
+        for i in range(len(images)):
+            image = images[i]
+            np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
             print("saved file")
 
     def replay(self):
