@@ -95,7 +95,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.replay_button.clicked.connect(self.replay)
         self.exposure_time_bar.valueChanged.connect(self.exposure_time)
         self.binning_combo_box.activated.connect(self.binning)
-        self.subArray_mode_radioButton.isChecked(self.subarray)
+        self.subArray_mode_radioButton.toggled.connect(self.subarray)
 
         ## dlp widget
         self.display_internal_pattern_combobox.activated.connect(self.internal_test_pattern)
@@ -221,8 +221,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cam.write_binning(4)
 
     def subarray(self):
-        self.cam.write_subarray_mode(2)
-        self.subarray_label.setText(str(self.cam.read_subarray_mode(), self.cam.get_subarray_size()))
+        if self.subArray_mode_radioButton.isChecked():
+            self.cam.write_subarray_mode(2)
+            self.subarray_label.setText(str(self.cam.read_subarray_mode(), self.cam.get_subarray_size()))
 
 
     ####################

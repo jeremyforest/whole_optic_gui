@@ -258,7 +258,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>SubArray mode ?</string>
+      <string>SubArray mode</string>
      </property>
     </widget>
     <widget class="QLabel" name="subarray_label">
@@ -271,7 +271,7 @@
       </rect>
      </property>
      <property name="text">
-      <string>subarray size and origin</string>
+      <string>subarray mode size and origin</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignCenter</set>
