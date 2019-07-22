@@ -74,6 +74,10 @@ class MainCamera():
             images.append(image)
         return images
 
+    def get_internal_frame_rate(self):
+        frame_rate = self.hcam.getPropertyValue("internal_frame_rate")[0]
+        return frame_rate
+
 
 
 

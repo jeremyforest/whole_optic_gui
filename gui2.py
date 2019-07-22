@@ -86,8 +86,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.simulated = False
 
         ## folder widget
-        self.change_folder_button.clicked.connect(self.change_folder)
+        self.initialize_harware_button.clicked.connect(self.initialize_hardware)
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
+        self.change_folder_button.clicked.connect(self.change_folder)
 
         #camera widget
         self.snap_image_button.clicked.connect(self.snap_image)
@@ -96,6 +97,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.exposure_time_bar.valueChanged.connect(self.exposure_time)
         self.binning_combo_box.activated.connect(self.binning)
         self.subArray_mode_radioButton.toggled.connect(self.subarray)
+        self.update_internal_frame_rate_button.clicked.connect(self.update_internal_frame_rate)
 
         ## dlp widget
         self.display_internal_pattern_combobox.activated.connect(self.internal_test_pattern)
@@ -115,6 +117,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ## menu bar connection
         self.actionQuit.triggered.connect(self.bye)
+
+    def initialized_hardware(self):
+        ##get camera parameters     ## get camera parameters to show up in the GUI at initialization subarray_size
+        ## binning, exposure time, array size    what else ?
+        self.x_dim = self.cam.get_subarray_size()[2]
+        self.y_dim = self.cam.get_subarray_size()[4]
+
 
     def change_folder(self):
         self.path = QFileDialog.getExistingDirectory(None, 'Select the right folder to load the image batch:', 'C:/', QFileDialog.ShowDirsOnly)
@@ -139,11 +148,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             f.close()
 
         self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI
-
-
-        ##get camera parameters     ## get camera parameters to show up in the GUI at initialization
-        ## binning, exposure time, array size    what else ?
-
 
     def save_as_png(self, array, image_name):
         plt.imsave('{}{}.png'.format(self.path, image_name), array, cmap='gray')
@@ -176,7 +180,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
-                self.image_reshaped = self.image.reshape(2048, 2048) ## image needs reshaping for show
+                self.image_reshaped = self.image.reshape(self.x_dim, self.y_dim) ## image needs reshaping for show
                 for j in range(len(self.images)): ## for saving later
                     self.image_list.append(self.images[i])
                 self.graphicsView.setImage(self.image_reshaped)
@@ -223,7 +227,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def subarray(self):
         if self.subArray_mode_radioButton.isChecked():
             self.cam.write_subarray_mode(2)
-            self.subarray_label.setText(str(self.cam.read_subarray_mode(), self.cam.get_subarray_size()))
+            self.x_dim,ok = QInputDialog.getInt(self,"new x dimension value","enter a number")
+            self.y_dim,ok = QInputDialog.getInt(self,"new y dimension value","enter a number")
+            self.cam.write_subarray_size(0, self.x_dim, 0, self.y_dim)
+            self.subarray_label.setText(str(self.cam.get_subarray_size()))
+
+    def update_internal_frame_rate():
+        self.internal_frame_rate = self.cam.get_internal_frame_rate()
+        self.internal_frame_rate_label.setText(str(self.internal_frame_rate))
+
+
+
 
 
     ####################
