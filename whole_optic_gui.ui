@@ -335,7 +335,7 @@
       <set>Qt::AlignCenter</set>
      </property>
     </widget>
-    <widget class="QPushButton" name="Update_internal_frame_rate_button">
+    <widget class="QPushButton" name="update_internal_frame_rate_button">
      <property name="geometry">
       <rect>
        <x>869</x>
