@@ -248,7 +248,7 @@
       <string>Binning</string>
      </property>
     </widget>
-    <widget class="QRadioButton" name="radioButton">
+    <widget class="QRadioButton" name="subArray_mode_radioButton">
      <property name="geometry">
       <rect>
        <x>640</x>
