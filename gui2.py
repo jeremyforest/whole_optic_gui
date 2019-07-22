@@ -86,7 +86,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.simulated = False
 
         ## folder widget
-        self.initialize_harware_button.clicked.connect(self.initialize_hardware)
+        self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
         self.change_folder_button.clicked.connect(self.change_folder)
 
@@ -118,12 +118,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## menu bar connection
         self.actionQuit.triggered.connect(self.bye)
 
-    def initialized_hardware(self):
+    def initialize_hardware(self):
         ##get camera parameters     ## get camera parameters to show up in the GUI at initialization subarray_size
         ## binning, exposure time, array size    what else ?
-        self.x_dim = self.cam.get_subarray_size()[2]
-        self.y_dim = self.cam.get_subarray_size()[4]
-
+        self.x_dim = self.cam.get_subarray_size()[1]
+        self.y_dim = self.cam.get_subarray_size()[3]
+        self.binning = self.cam.read_binning()
 
     def change_folder(self):
         self.path = QFileDialog.getExistingDirectory(None, 'Select the right folder to load the image batch:', 'C:/', QFileDialog.ShowDirsOnly)
@@ -174,15 +174,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 pg.QtGui.QApplication.processEvents()
         else:
             self.cam.start_acquisition()
+            self.image_list = []
             for i in range(1000):
                 self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
                 while self.images == []:
                     QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
-                self.image_reshaped = self.image.reshape(self.x_dim, self.y_dim) ## image needs reshaping for show
+                self.image_reshaped = self.image.reshape(int(self.x_dim/int(self.binning)),
+                                                        int(self.y_dim/int(self.binning))) ## image needs reshaping for show
                 for j in range(len(self.images)): ## for saving later
-                    self.image_list.append(self.images[i])
+                    self.image_list.append(self.images[j])
                 self.graphicsView.setImage(self.image_reshaped)
                 pg.QtGui.QApplication.processEvents()
             self.cam.end_acquisition()
@@ -217,12 +219,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.exposure_time_value.display(read_value)
 
     def binning(self, index):
-        if index == 1:
+        if index == 0:
             self.cam.write_binning(1)
-        if index == 2:
+        if index == 1:
             self.cam.write_binning(2)
-        if index == 4:
+        if index == 2:
             self.cam.write_binning(4)
+        self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
+        self.binning = self.cam.read_binning()
 
     def subarray(self):
         if self.subArray_mode_radioButton.isChecked():
@@ -232,7 +236,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cam.write_subarray_size(0, self.x_dim, 0, self.y_dim)
             self.subarray_label.setText(str(self.cam.get_subarray_size()))
 
-    def update_internal_frame_rate():
+    def update_internal_frame_rate(self):
         self.internal_frame_rate = self.cam.get_internal_frame_rate()
         self.internal_frame_rate_label.setText(str(self.internal_frame_rate))
 
