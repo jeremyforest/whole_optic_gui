@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from whole_optic_gui import Ui_MainWindow
 import argparse
 
-
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
   from PyQt5.QtCore import pyqtRemoveInputHook
