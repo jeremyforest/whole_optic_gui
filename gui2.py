@@ -25,7 +25,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.retranslateUi(self)
 
         ###################################
-        ##### hardware initialization #####
+        ##### gui initialization #####
         ###################################
 
         ## commande-line options
@@ -118,12 +118,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## menu bar connection
         self.actionQuit.triggered.connect(self.bye)
 
+
+    ###################################
+    ########## GUI code ###############
+    ###################################
     def initialize_hardware(self):
-        ##get camera parameters     ## get camera parameters to show up in the GUI at initialization subarray_size
-        ## binning, exposure time, array size    what else ?
+        # initialize camera parameters
         self.x_dim = self.cam.get_subarray_size()[1]
         self.y_dim = self.cam.get_subarray_size()[3]
-        self.binning = self.cam.read_binning()
+        self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
+        self.subarray_label.setText(str(self.cam.get_subarray_size()))
+        self.exposure_time_value.display(self.cam.read_exposure())
 
     def change_folder(self):
         self.path = QFileDialog.getExistingDirectory(None, 'Select the right folder to load the image batch:', 'C:/', QFileDialog.ShowDirsOnly)
@@ -131,7 +136,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def initialize_experiment(self):
         self.path = QFileDialog.getExistingDirectory(None, 'Select a folder where you want to store your data:', 'C:/', QFileDialog.ShowDirsOnly)
-        date = time.strftime("%d_%m_%Y")
+        date = time.strftime("%Y_%m_%d")
         self.path = os.path.join(self.path, date)
         if not os.path.exists(self.path):
             os.makedirs(self.path) ## make a folder with the date of today if it does not already exists
@@ -152,11 +157,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def save_as_png(self, array, image_name):
         plt.imsave('{}{}.png'.format(self.path, image_name), array, cmap='gray')
 
-    def snap_image(self):
+    def snap_image(self): ## only takes an image and saves it
         self.cam.start_acquisition()
         self.images.self.cam.get_images()
         self.image = self.images
-        self.image_reshaped = self.image.reshape(2048, 2048)
+        self.image_reshaped =self.image.reshape(int(self.x_dim/int(self.binning)), int(self.y_dim/int(self.binning)))
         self.graphicsView.setImage(self.image_reshaped)
         image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
         self.save_as_png(self.image, image_name)
@@ -165,11 +170,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.simulated:
             for i in range(10):
                 self.image = np.random.rand(256, 256)
-
-    #            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
-    #            timer.timeout.connect(self.update)
-    #            timer.start(0.01)
-
                 self.graphicsView.setImage(self.image)
                 pg.QtGui.QApplication.processEvents()
         else:
@@ -206,11 +206,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             images = []
             for i in range(images_nb):
                 image = np.load(str(self.path) + '/image{}.npy'.format(str(i)))
-                image_reshaped = image.reshape(2048, 2048)
+                image_reshaped = self.image.reshape(int(self.x_dim/int(self.binning)), int(self.y_dim/int(self.binning)))
                 images.append(image_reshaped)
             for img in images:
                 self.graphicsView.setImage(img.T)
-                pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in ints own thread with the update function ?
+                pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in its own thread with the update function ?
 
     def exposure_time(self, value):
         value /= 100
@@ -231,9 +231,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def subarray(self):
         if self.subArray_mode_radioButton.isChecked():
             self.cam.write_subarray_mode(2)
+            self.x_init,ok = QInputDialog.getInt(self,"new x origin value","enter a number")
             self.x_dim,ok = QInputDialog.getInt(self,"new x dimension value","enter a number")
+            self.y_init,ok = QInputDialog.getInt(self,"new y origin value","enter a number")
             self.y_dim,ok = QInputDialog.getInt(self,"new y dimension value","enter a number")
-            self.cam.write_subarray_size(0, self.x_dim, 0, self.y_dim)
+            self.cam.write_subarray_size(self.x_init, self.x_dim, self.y_init, self.y_dim)
             self.subarray_label.setText(str(self.cam.get_subarray_size()))
 
     def update_internal_frame_rate(self):
