@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 
 # own scripts
 import clickable_matplotlib_graph
-# from camera.camera_control import MainCamera
-# from dlp.dlp_control import Dlp
+from camera.camera_control import MainCamera
+from dlp.dlp_control import Dlp
 # from laser.laser_control import CrystalLaser
 # from controler.manipulator_command import Scope
 
@@ -40,13 +40,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ###################################
 
         ##### camera #####
-        # if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
-        #    self.cam = MainCamera()
-        # else:
-        #    print("Main camera / Hamamatsu camera will not work")
-        # ##### dlp #####
-        # self.dlp = Dlp()
-        # self.dlp.connect()
+        if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
+           self.cam = MainCamera()
+        else:
+           print("Main camera / Hamamatsu camera will not work")
+        ##### dlp #####
+        self.dlp = Dlp()
+        self.dlp.connect()
         # ##### laser #####
         # self.laser = CrystalLaser()
         # self.laser.connect()
@@ -259,7 +259,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         camera_image = self.cam.get_images()[0].reshape(2048,2048)
         graph = clickable_matplotlib_graph.Clickable_matplotlib_graph(camera_image)
         coords_points_calib_camera = graph.getCoord()
-        ## performing the calculs to get the transformation matrix
+        ## performing the calculs to get the transformation matrix between the camera image and the dlp image
         self.dlp_transformation_matrix = cv2.getPerspectiveTransform(coords_points_calib_camera,coords_points_calib_dlp)
         return self.dlp_transformation_matrix
 

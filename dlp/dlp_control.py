@@ -32,7 +32,7 @@ class Dlp():
 		self.dlp.displayInternalTestPattern(1)
 
 	def checkerboard(self):
-		self.dlp.displayInternalTestPattern(14)
+		self.dlp.displayInternalTestPattern(13)
 
 
 	## static images
