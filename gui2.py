@@ -56,7 +56,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## variable reference for later use
         self.path = None
         self.save_images = False
-        self.simulated = True
+        self.simulated = False
         self.roi_list = []
         self.dlp_transformation_matrix = []
 
@@ -247,7 +247,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
     def calibration(self):
         ## will ask for the calibration image
-        calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
+        # calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
+        # debug_trace()
+        calibration_image_path = 'C:/Users/barral/Desktop/whole_optic_gui-roi/dlp/Calibration_9pts.bmp'
         # calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
         ## dlp img
         calibration_image = Image.open(calibration_image_path)
@@ -284,13 +286,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if index == 0: ## choose static image
                 img_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
                 img = Image.open(img_path[0])
-                if img.shape == (608, 684):
-                    self.dlp.display_static_image(img)
+                if img.size == (608, 684):
+                    self.dlp.display_static_image(img_path[0])
                 else:
-                    cv2.warpPerspective(img, self.dlp_transformation_matrix,(608, 684))
-                    self.dlp.display_static_image(img)
-            elif index == 1:
-                ##generate static image from ROI
+                    new_img = cv2.warpPerspective(img, self.dlp_transformation_matrix,(608, 684))
+                    cv2.imwrite(img_path[0] + '.bmp', new_img) ## to do : create temp folder for storage/retrieval
+                    self.dlp.display_static_image(img_path[0] + '.bmp')
+            elif index == 1:  ##generate static image from ROI
                 black_image = Image.new('1', (2048,2048), color=0)
                 black_image_with_ROI = black_image
                 for nb in range(len(self.roi_list)):
@@ -298,8 +300,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
                     draw = ImageDraw.Draw(black_image_with_ROI)
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
-                cv2.warpPerspective(black_image_with_ROI, self.dlp_transformation_matrix,(608, 684))
-                self.dlp.display_static_image(img)
+                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.dlp_transformation_matrix,(608, 684))
+                cv2.imwrite('black_image_with_ROI_warped' + '.bmp', black_image_with_ROI_warped) ## to do: save in specific folder for archive
+                self.dlp.display_static_image('black_image_with_ROI_warped' + '.bmp')
 
         ## Internal test pattern mode
         elif self.display_mode_combobox.currentIndex() == 1: ## internal test pattern
@@ -315,7 +318,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif self.display_mode_combobox.currentIndex == 2:  ## HDMI video sequence
             print("mode not yet implemented")
 
-        ## Pattern sequence mode
+        ## Pattern sequence mode  ## need to finish when static image generation sure that works
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
             if index == 0: # Generate Pattern Sequence
                 black_image = np.zeros((2048, 2048))
