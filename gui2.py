@@ -126,6 +126,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # initialize camera parameters
         self.x_dim = self.cam.get_subarray_size()[1]
         self.y_dim = self.cam.get_subarray_size()[3]
+        self.binning = self.cam.read_binning()
         self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
         self.subarray_label.setText(str(self.cam.get_subarray_size()))
         self.exposure_time_value.display(self.cam.read_exposure())
@@ -161,7 +162,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cam.start_acquisition()
         self.images.self.cam.get_images()
         self.image = self.images
-        self.image_reshaped =self.image.reshape(int(self.x_dim/int(self.binning)), int(self.y_dim/int(self.binning)))
+        self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                int(self.y_dim/self.binning)) ## image needs reshaping
         self.graphicsView.setImage(self.image_reshaped)
         image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
         self.save_as_png(self.image, image_name)
@@ -181,8 +183,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
-                self.image_reshaped = self.image.reshape(int(self.x_dim/int(self.binning)),
-                                                        int(self.y_dim/int(self.binning))) ## image needs reshaping for show
+                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
                 for j in range(len(self.images)): ## for saving later
                     self.image_list.append(self.images[j])
                 self.graphicsView.setImage(self.image_reshaped)
@@ -206,7 +208,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             images = []
             for i in range(images_nb):
                 image = np.load(str(self.path) + '/image{}.npy'.format(str(i)))
-                image_reshaped = self.image.reshape(int(self.x_dim/int(self.binning)), int(self.y_dim/int(self.binning)))
+                image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
                 images.append(image_reshaped)
             for img in images:
                 self.graphicsView.setImage(img.T)
