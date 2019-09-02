@@ -45,8 +45,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
            print("Main camera / Hamamatsu camera will not work")
         ##### dlp #####
-        self.dlp = Dlp()
-        self.dlp.connect()
+        # self.dlp = Dlp()
+        # self.dlp.connect()
         # ##### laser #####
         # self.laser = CrystalLaser()
         # self.laser.connect()
@@ -249,16 +249,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## will ask for the calibration image
         # calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
         # debug_trace()
-        calibration_image_path = 'C:/Users/barral/Desktop/whole_optic_gui-roi/dlp/Calibration_9pts.bmp'
-        # calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
+        # calibration_image_path = 'C:/Users/barral/Desktop/whole_optic_gui-roi/dlp/Calibration_9pts.bmp'
+        calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
         ## dlp img
         calibration_image = Image.open(calibration_image_path)
-        dlp_image = np.asarray(calibration_image, dtype=np.uint8)
+        dlp_image = np.asarray(calibration_image, dtype=np.uint8).shape
         graph = clickable_matplotlib_graph.Clickable_matplotlib_graph(calibration_image_path)
         coords_points_calib_dlp = graph.getCoord()
+        status, grid_points = cv2.findCirclesGrid(dlp_image, (3,3), flags=cv2.CALIB_CB_SYMMETRIC_GRID)
+
         ## projecting the calibration image with the dlp to get the camera image
         self.dlp.display_static_image(calibration_image_path[0])
         camera_image = self.cam.get_images()[0].reshape(2048,2048)
+        camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_image_cam.bmp"
+        camera_image = Image.open(camera_image_path)
         graph = clickable_matplotlib_graph.Clickable_matplotlib_graph(camera_image)
         coords_points_calib_camera = graph.getCoord()
         ## performing the calculs to get the transformation matrix between the camera image and the dlp image
