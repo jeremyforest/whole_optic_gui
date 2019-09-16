@@ -272,9 +272,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         fn = lambda x : 255 if x > thresh else 0
         camera_image = camera_image.convert('L').point(fn, mode='1')
         camera_image = ImageOps.invert(camera_image.convert('RGB'))
-        # camera_image = camera_image.resize((300,300), Image.ANTIALIAS) ## need to get rid of this
         camera_image = np.asarray(camera_image)
-
         ## need to tune the cv2 detector for the detection of circles in a large image
         params = cv2.SimpleBlobDetector_Params()
         params.filterByArea = True
@@ -286,20 +284,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         params.minCircularity = 0.2
 
         detector = cv2.SimpleBlobDetector_create(params)
-
         keypoints = detector.detect(camera_image)
-        fig = plt.figure()
-        im_with_keypoints = cv2.drawKeypoints(camera_image, keypoints, np.array([]), (128, 128, 128), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        plt.imshow(cv2.cvtColor(im_with_keypoints, cv2.COLOR_BGR2RGB),
-                   interpolation='bicubic')
-        fig.savefig('calibration.png')
-        plt.close(fig)
 
+        # fig = plt.figure()
+        # im_with_keypoints = cv2.drawKeypoints(camera_image, keypoints, np.array([]), (128, 128, 128), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        # plt.imshow(cv2.cvtColor(im_with_keypoints, cv2.COLOR_BGR2RGB),
+        #            interpolation='bicubic')
+        # fig.savefig('calibration.png')
+        # plt.close(fig)
 
-
-         isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
-
-
+        isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
         print(isFound_camera, centers_camera)
 
         ## performing the calculs to get the transformation matrix between the camera image and the dlp image
