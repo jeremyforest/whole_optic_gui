@@ -9,7 +9,7 @@ from whole_optic_gui import Ui_MainWindow
 ## common dependencies
 import numpy as np
 import os, time, sys, time
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
 import cv2
 import matplotlib.pyplot as plt
 
@@ -248,25 +248,62 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def calibration(self):
         ## will ask for the calibration image
         # calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
-        # debug_trace()
         # calibration_image_path = 'C:/Users/barral/Desktop/whole_optic_gui-roi/dlp/Calibration_9pts.bmp'
-        calibration_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
         ## dlp img
-        calibration_image = Image.open(calibration_image_path)
-        dlp_image = np.asarray(calibration_image, dtype=np.uint8).shape
-        graph = clickable_matplotlib_graph.Clickable_matplotlib_graph(calibration_image_path)
-        coords_points_calib_dlp = graph.getCoord()
-        status, grid_points = cv2.findCirclesGrid(dlp_image, (3,3), flags=cv2.CALIB_CB_SYMMETRIC_GRID)
+        dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
+        dlp_image = Image.open(dlp_image_path)
+        dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
+        dlp_image = np.asarray(dlp_image)
+        shape = (3, 3)
+        isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
+        print(isFound_dlp, centers_dlp)
+
+        # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp)
+        # cv2.imshow('debug', show)
+        # cv2.waitKey(0)
 
         ## projecting the calibration image with the dlp to get the camera image
-        self.dlp.display_static_image(calibration_image_path[0])
-        camera_image = self.cam.get_images()[0].reshape(2048,2048)
-        camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_image_cam.bmp"
+        # self.dlp.display_static_image(calibration_image_path[0])
+        # camera_image = self.cam.get_images()[0].reshape(2048,2048)
+        camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image_3x3_dots.png"
         camera_image = Image.open(camera_image_path)
-        graph = clickable_matplotlib_graph.Clickable_matplotlib_graph(camera_image)
-        coords_points_calib_camera = graph.getCoord()
+
+        thresh = 20
+        fn = lambda x : 255 if x > thresh else 0
+        camera_image = camera_image.convert('L').point(fn, mode='1')
+        camera_image = ImageOps.invert(camera_image.convert('RGB'))
+        # camera_image = camera_image.resize((300,300), Image.ANTIALIAS) ## need to get rid of this
+        camera_image = np.asarray(camera_image)
+
+        ## need to tune the cv2 detector for the detection of circles in a large image
+        params = cv2.SimpleBlobDetector_Params()
+        params.filterByArea = True
+        params.minArea = 50
+        params.maxArea = 2000
+        params.minDistBetweenBlobs = 20
+        params.filterByColor = True
+        params.filterByConvexity = False
+        params.minCircularity = 0.2
+
+        detector = cv2.SimpleBlobDetector_create(params)
+
+        keypoints = detector.detect(camera_image)
+        fig = plt.figure()
+        im_with_keypoints = cv2.drawKeypoints(camera_image, keypoints, np.array([]), (128, 128, 128), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        plt.imshow(cv2.cvtColor(im_with_keypoints, cv2.COLOR_BGR2RGB),
+                   interpolation='bicubic')
+        fig.savefig('calibration.png')
+        plt.close(fig)
+
+
+
+         isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
+
+
+        print(isFound_camera, centers_camera)
+
         ## performing the calculs to get the transformation matrix between the camera image and the dlp image
-        self.dlp_transformation_matrix = cv2.getPerspectiveTransform(coords_points_calib_camera,coords_points_calib_dlp)
+        self.dlp_transformation_matrix = cv2.getPerspectiveTransform(centers_camera[0:4], centers_dlp[0:4])
         return self.dlp_transformation_matrix
 
     def display_mode(self, index):
