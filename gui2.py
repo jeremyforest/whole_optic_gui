@@ -1,6 +1,6 @@
 ## PyQT5
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene, QInputDialog
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 import pyqtgraph as pg
 from PyQt5.QtTest import QTest
@@ -58,7 +58,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.save_images = False
         self.simulated = False
         self.roi_list = []
-        self.dlp_transformation_matrix = []
+        self.dlp_homography_matrix = []
 
 
         ## folder widget
@@ -106,7 +106,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_folder_label_2.setText(str(self.path))
 
     def initialize_experiment(self):
-        self.path = QFileDialog.getExistingDirectory(None, 'Select a folder where you want to store your data:', 'C:/', QFileDialog.ShowDirsOnly)
+        self.path = QFileDialog.getExistingDirectory(None, 'Select the parent folder where you want to store your data:', 'C:/', QFileDialog.ShowDirsOnly)
         date = time.strftime("%d_%m_%Y")
         self.path = os.path.join(self.path, date)
         if not os.path.exists(self.path):
@@ -118,6 +118,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.path_temp = os.path.join(self.path, 'experiment_' + str(n))
         self.path = self.path_temp
         os.makedirs(self.path)
+        os.makedirs(self.path + '/dlp_images')
 
         with open(self.path + "/experiment_{}_info.txt".format(n),"w+") as f:       ## store basic info and comments
             f.write(time.asctime(time.localtime(time.time())))
@@ -145,7 +146,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         else:
             self.cam.start_acquisition()
-            for i in range(1000):
+            for i in range(100):
 
                 self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
                 if self.images == []:
@@ -187,6 +188,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def reset_roi(self):
         self.saved_ROI_image.getView().clear()
+        self.saved_ROI_image.setImage(self.image_reshaped)
         self.roi_list = []
         self.ROI_label_placeholder.setText(str(0))
 
@@ -246,30 +248,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ##### DLP part #####
     ####################
     def calibration(self):
-        ## will ask for the calibration image
-        # calibration_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
-        # calibration_image_path = 'C:/Users/barral/Desktop/whole_optic_gui-roi/dlp/Calibration_9pts.bmp'
         ## dlp img
-        dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
+        ## will ask for the calibration image of the dlp
+        dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
+        # dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
         dlp_image = Image.open(dlp_image_path)
         dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
         dlp_image = np.asarray(dlp_image)
         shape = (3, 3)
         isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
-        print(isFound_dlp, centers_dlp)
-
-        # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp)
-        # cv2.imshow('debug', show)
-        # cv2.waitKey(0)
+        if isFound_dlp:
+            print('found {} circle centers on images'.format(len(centers_dlp)))
+        # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp) ## if ever need to put chessboard
 
         ## projecting the calibration image with the dlp to get the camera image
-        # self.dlp.display_static_image(calibration_image_path[0])
-        # camera_image = self.cam.get_images()[0].reshape(2048,2048)
-        camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image_3x3_dots.png"
-        camera_image = Image.open(camera_image_path)
+        self.dlp.display_static_image(dlp_image_path)
+        self.cam.start_acquisition()
+        for i in range(1):
+            camera_image = self.cam.get_images()[0].reshape(2048,2048).T
+        self.cam.end_acquisition()
+        # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
+        # camera_image = Image.open(camera_image_path)
 
-        thresh = 20
+        ## converting the image in greylevels to 0/1 bit format using a threshold
+        thresh = 230
         fn = lambda x : 255 if x > thresh else 0
+        camera_image = Image.fromarray(camera_image)
         camera_image = camera_image.convert('L').point(fn, mode='1')
         camera_image = ImageOps.invert(camera_image.convert('RGB'))
         camera_image = np.asarray(camera_image)
@@ -282,38 +286,42 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         params.filterByColor = True
         params.filterByConvexity = False
         params.minCircularity = 0.2
-
         detector = cv2.SimpleBlobDetector_create(params)
         keypoints = detector.detect(camera_image)
 
-        # fig = plt.figure()
-        # im_with_keypoints = cv2.drawKeypoints(camera_image, keypoints, np.array([]), (128, 128, 128), cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        # plt.imshow(cv2.cvtColor(im_with_keypoints, cv2.COLOR_BGR2RGB),
-        #            interpolation='bicubic')
-        # fig.savefig('calibration.png')
-        # plt.close(fig)
-
         isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
-        print(isFound_camera, centers_camera)
+        if isFound_camera:
+            print('found {} circle centers on images'.format(len(centers_camera)))
+
+        ## for debug
+        # camera_image_drawn = cv2.drawChessboardCorners(camera_image, shape, centers_camera, isFound_camera)
+        # camera_image_drawn = Image.fromarray(camera_image_drawn)
+        # camera_image_drawn.show()
+
+        # homography_matrix = cv2.findHomography(centers_camera, centers_dlp)
+        # warped_camera_image = cv2.warpPerspective(camera_image, homography_matrix[0], dsize=(608,684))
+        # warped_camera_image_drawn = Image.fromarray(warped_camera_image)
+        # warped_camera_image_drawn.show()
 
         ## performing the calculs to get the transformation matrix between the camera image and the dlp image
-        self.dlp_transformation_matrix = cv2.getPerspectiveTransform(centers_camera[0:4], centers_dlp[0:4])
-        return self.dlp_transformation_matrix
+        self.dlp_homography_matrix = cv2.findHomography(centers_camera, centers_dlp)
+        return self.dlp_homography_matrix
 
     def display_mode(self, index):
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
             self.dlp.set_display_mode('static')
-            self.display_mode_subbox_combobox.addItem('Choose Static Image')
-            self.display_mode_subbox_combobox.addItem('Generate Static Image from ROI')
+            self.display_mode_subbox_combobox.addItems(['Choose Static Image', 'Generate Static Image from ROI'])
         if index == 1: # internal test pattern
             self.dlp.set_display_mode('internal')
-            self.display_mode_subbox_combobox.addItems  (['Solid Blue', 'Solid Black', 'ANSI 4×4 Checkerboard'])
+            self.display_mode_subbox_combobox.addItems(['Checkboard small', 'Black', 'White', 'Green', 'Blue', 'Red', 'Vertical lines 1',
+                                                        'Horizontal lines 1', 'Vertical lines 2', 'Horizontal lines 2', 'Diagonal lines',
+                                                        'Grey Ranp Vertical', 'Grey Ramp Horizontal', 'Checkerboard big'])
         if index == 2: # hdmi video input
             self.display_mode_subbox_combobox.addItem('Choose HDMI Video Sequence')
         if index == 3: # pattern sequence display
             self.dlp.set_display_mode('pattern')
-            self.display_mode_subbox_combobox.addItems(['Generate Pattern Sequence', 'Choose Pattern Sequence To Load'])
+            self.display_mode_subbox_combobox.addItems(['Choose Pattern Sequence To Load', 'Generate Multiple Images with One ROI Per Image'])
 
     def choose_action(self, index):
         ## Static image mode
@@ -324,45 +332,82 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 if img.size == (608, 684):
                     self.dlp.display_static_image(img_path[0])
                 else:
-                    new_img = cv2.warpPerspective(img, self.dlp_transformation_matrix,(608, 684))
-                    cv2.imwrite(img_path[0] + '.bmp', new_img) ## to do : create temp folder for storage/retrieval
-                    self.dlp.display_static_image(img_path[0] + '.bmp')
+                    warped_image = cv2.warpPerspective(img, self.dlp_homography_matrix[0],(608, 684))
+                    cv2.imwrite(img_path[0] + 'warped.bmp', warped_image)
+                    self.dlp.display_static_image(img_path[0] + 'warped.bmp')
+
             elif index == 1:  ##generate static image from ROI
-                black_image = Image.new('1', (2048,2048), color=0)
+                black_image = Image.new('1', (2048,2048), color=0) ## need to make this dependant upon fov size and not 2048
                 black_image_with_ROI = black_image
                 for nb in range(len(self.roi_list)):
                     x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
+                    # x0,y0,x1,y1 = 0, 0, 1000, 2048
                     draw = ImageDraw.Draw(black_image_with_ROI)
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
-                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.dlp_transformation_matrix,(608, 684))
-                cv2.imwrite('black_image_with_ROI_warped' + '.bmp', black_image_with_ROI_warped) ## to do: save in specific folder for archive
-                self.dlp.display_static_image('black_image_with_ROI_warped' + '.bmp')
+                black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
+                black_image_with_ROI = np.asarray(black_image_with_ROI)
+                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.homography_matrix[0],(608, 684))
+                cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped)
 
         ## Internal test pattern mode
         elif self.display_mode_combobox.currentIndex() == 1: ## internal test pattern
-            # in order:
-            if index == 0:  #solid blue
-                self.dlp.turn_on_blue()
-            if index == 1: # solid black
-                self.dlp.turn_off_light()
-            if index == 2: ## ANSI 4×4 Checkerboard
-                self.dlp.checkerboard()
+            if index == 0: ## Checkboard small
+                self.dlp.checkboard_small()
+            if index == 1: # Black
+                self.dlp.black()
+            if index == 2: ## White
+                self.dlp.white()
+            if index == 3: ## Green
+                self.dlp.green()
+            if index == 4: ## Blue
+                self.dlp.blue()
+            if index == 5: ## Red
+                self.dlp.red()
+            if index == 6: ## Vertical lines 1
+                self.dlp.horizontal_lines_1()
+            if index == 7: ## Horizontal lines 1
+                self.dlp.vertical_lines_1()
+            if index == 8: ## Vertical lines 2
+                self.dlp.horizontal_lines_2()
+            if index == 9: ## Horizontal lines 2
+                self.dlp.vertical_lines_2()
+            if index == 10: ## Diagonal lines
+                self.dlp.diagonal_lines()
+            if index == 11: ## Grey Ramp Vertical
+                self.dlp.grey_ramp_vertical()
+            if index == 12: ## Grey Ramp Horizontal
+                self.dlp.grey_ramp_horizontal()
+            if index == 13: ## Checkerboard Big
+                self.dlp.checkerboard_big()
 
-        # HDMI Video Input
+        ## HDMI Video Input mode
         elif self.display_mode_combobox.currentIndex == 2:  ## HDMI video sequence
             print("mode not yet implemented")
 
-        ## Pattern sequence mode  ## need to finish when static image generation sure that works
+        ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
-            if index == 0: # Generate Pattern Sequence
-                black_image = np.zeros((2048, 2048))
-
-                file_out = "test1.bmp"
-                img.save(file_out)
-
             if index == 1: # Choose Pattern Sequence To Load
-                pass
+                time, ok = QInputDialog.getInt(self, 'Input Dialog', 'Duration of pattern exposition (in µs)')   ## time to be given in microseconds
+                image_folder = QFileDialog.getExistingDirectory(self, 'Select Image Folder where DLP images are stored')
+                InputTriggerDelay = 0
+                AutoTriggerPeriod = 3333334
+                ExposureTime = 3333334
+                self.dlp.display_image_sequence(image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
+
+            if index == 0: ## Generate Multiple Images with One ROI Per Image
+                for nb in range(len(self.roi_list)):
+                    black_image = Image.new('1', (2048,2048), color=0) ## need to make this dependant upon fov size and not 2048
+                    black_image_with_ROI = black_image
+                    x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
+                    x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
+                    draw = ImageDraw.Draw(black_image_with_ROI)
+                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
+                    black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
+                    black_image_with_ROI = np.asarray(black_image_with_ROI)
+                    black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.homography_matrix[0],(608, 684))
+                    cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped)
+
 
 
     ####################
