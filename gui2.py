@@ -45,8 +45,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
            print("Main camera / Hamamatsu camera will not work")
         ##### dlp #####
-        # self.dlp = Dlp()
-        # self.dlp.connect()
+        self.dlp = Dlp()
+        self.dlp.connect()
         # ##### laser #####
         # self.laser = CrystalLaser()
         # self.laser.connect()
@@ -56,9 +56,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## variable reference for later use
         self.path = None
         self.save_images = False
-        self.simulated = False
+        self.simulated = True
         self.roi_list = []
-        self.dlp_homography_matrix = []
+        self.camera_to_dlp_matrix = []
+        self.camera_distortion_matrix = []
 
 
         ## folder widget
@@ -135,8 +136,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def stream(self):       ## stream images in continuous flow
         if self.simulated:
-            for i in range(500):
-                self.image = np.random.rand(256, 256)
+            for i in range(1):
+                self.image = np.random.rand(2048, 2048).T
                 self.image_reshaped = self.image
     #            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
     #            timer.timeout.connect(self.update)
@@ -153,7 +154,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     QTest.qWait(500) ## temporary hack - doesn't really work for long exposure time
                     self.images = self.cam.get_images()
                 self.image = self.images[0]  ## keeping only the 1st for projetion
-                self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
+                self.image_reshaped = self.image.reshape(2048, 2048).T ## needs reshaping
 
             ### the timer makes it impossible to get new images for whatever reason, when end_acquisition is here and when I
             ### remove it it works but super slow
@@ -255,6 +256,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         dlp_image = Image.open(dlp_image_path)
         dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
         dlp_image = np.asarray(dlp_image)
+        dlp_image = cv2.resize(dlp_image, (342,604))
         shape = (3, 3)
         isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
         if isFound_dlp:
@@ -263,6 +265,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ## projecting the calibration image with the dlp to get the camera image
         self.dlp.display_static_image(dlp_image_path)
+        time.sleep(2)
+        self.cam.write_exposure(0.1)
+        time.sleep(1)
         self.cam.start_acquisition()
         for i in range(1):
             camera_image = self.cam.get_images()[0].reshape(2048,2048).T
@@ -273,7 +278,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## converting the image in greylevels to 0/1 bit format using a threshold
         thresh = 230
         fn = lambda x : 255 if x > thresh else 0
-        camera_image = Image.fromarray(camera_image)
+        # camera_image = Image.fromarray(camera_image)
         camera_image = camera_image.convert('L').point(fn, mode='1')
         camera_image = ImageOps.invert(camera_image.convert('RGB'))
         camera_image = np.asarray(camera_image)
@@ -281,7 +286,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         params = cv2.SimpleBlobDetector_Params()
         params.filterByArea = True
         params.minArea = 50
-        params.maxArea = 2000
+        params.maxArea = 10000
         params.minDistBetweenBlobs = 20
         params.filterByColor = True
         params.filterByConvexity = False
@@ -304,8 +309,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # warped_camera_image_drawn.show()
 
         ## performing the calculs to get the transformation matrix between the camera image and the dlp image
-        self.dlp_homography_matrix = cv2.findHomography(centers_camera, centers_dlp)
-        return self.dlp_homography_matrix
+        self.camera_to_dlp_matrix = cv2.findHomography(centers_camera, centers_dlp)
+
+        # four_corners_camera = centers_camera[0],centers_camera[2], centers_camera[6],centers_camera[8]
+        # four_corners_camera = np.array([[center for [center] in four_corners_camera]])
+        # four_corners_dlp = centers_dlp[0], centers_dlp[2], centers_dlp[6], centers_dlp[8]
+        # four_corners_dlp = np.array([[center for [center] in four_corners_dlp]])
+        # self.camera_to_dlp_matrix = cv2.getPerspectiveTransform(four_corners_camera, four_corners_dlp)
+
+        ########################
+        ## getting the camera distortion matrix
+        # centers_camera = np.array([[center for [center] in centers_camera]])
+        # centers_dlp = np.array([[center for [center] in centers_dlp]])
+        # centers_dlp = centers_dlp.reshape(1,9,2)
+        #
+        # new_dim = np.zeros((1,9,1)) ## calibrateCamera function requires input in 3D
+        # centers_camera = np.concatenate((centers_camera, new_dim), axis=2)
+        #
+        # centers_camera = centers_camera.astype('float32') ## opencv is weird and if input are not specifically in float32 it will beug
+        # centers_dlp = centers_dlp.astype('float32')
+
+        # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(centers_camera, centers_dlp, (dlp_image.shape[0], dlp_image.shape[1]), None, None)
+        # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)
+        ########################
+
+
+        return self.camera_to_dlp_matrix#, self.camera_distortion_matrix
 
     def display_mode(self, index):
         self.display_mode_subbox_combobox.clear()
@@ -329,10 +358,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if index == 0: ## choose static image
                 img_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
                 img = Image.open(img_path[0])
-                if img.size == (608, 684):
+                if img.size == (684, 608):
                     self.dlp.display_static_image(img_path[0])
                 else:
-                    warped_image = cv2.warpPerspective(img, self.dlp_homography_matrix[0],(608, 684))
+                    warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix[0],(684, 608))
                     cv2.imwrite(img_path[0] + 'warped.bmp', warped_image)
                     self.dlp.display_static_image(img_path[0] + 'warped.bmp')
 
@@ -344,10 +373,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
                     # x0,y0,x1,y1 = 0, 0, 1000, 2048
                     draw = ImageDraw.Draw(black_image_with_ROI)
-                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
+                    draw.rectangle([(x0+608, y0), (x1+608, y1)], fill="white", outline=None) ## the 608 is for the 100% offset inherent to the dlp
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                 black_image_with_ROI = np.asarray(black_image_with_ROI)
-                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.homography_matrix[0],(608, 684))
+                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(684, 608))
                 cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped)
 
         ## Internal test pattern mode
@@ -405,7 +434,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                     black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                     black_image_with_ROI = np.asarray(black_image_with_ROI)
-                    black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.homography_matrix[0],(608, 684))
+                    black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608, 684))
                     cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped)
 
 
