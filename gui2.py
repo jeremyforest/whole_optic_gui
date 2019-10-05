@@ -45,8 +45,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
            print("Main camera / Hamamatsu camera will not work")
         ##### dlp #####
-        self.dlp = Dlp()
-        self.dlp.connect()
+        # self.dlp = Dlp()
+        # self.dlp.connect()
         # ##### laser #####
         # self.laser = CrystalLaser()
         # self.laser.connect()
@@ -170,7 +170,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def roi(self):
         axes = (0, 1)
-        self.saved_ROI_image.setImage(self.image_reshaped) ## get the image into the ROI graphic interface
+        # self.saved_ROI_image.setImage(self.image_reshaped) ## get the image into the ROI graphic interface
 
         # data, coords = self.graphicsView.roi.getArrayRegion(self.image_reshaped.view(), self.graphicsView.imageItem, axes, returnMappedCoords=True) ## get the roi data and coords
         # self.roi_list.append(coords)
@@ -189,7 +189,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def reset_roi(self):
         self.saved_ROI_image.getView().clear()
-        self.saved_ROI_image.setImage(self.image_reshaped)
+        # self.saved_ROI_image.setImage(self.image_reshaped)
         self.roi_list = []
         self.ROI_label_placeholder.setText(str(0))
 
@@ -251,12 +251,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def calibration(self):
         ## dlp img
         ## will ask for the calibration image of the dlp
-        dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
-        # dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
+        # dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
+        dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
         dlp_image = Image.open(dlp_image_path)
         dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
         dlp_image = np.asarray(dlp_image)
-        dlp_image = cv2.resize(dlp_image, (342,604))
+        dlp_image = cv2.resize(dlp_image, (608,684))
         shape = (3, 3)
         isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
         if isFound_dlp:
@@ -264,16 +264,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp) ## if ever need to put chessboard
 
         ## projecting the calibration image with the dlp to get the camera image
-        self.dlp.display_static_image(dlp_image_path)
-        time.sleep(2)
-        self.cam.write_exposure(0.1)
-        time.sleep(1)
-        self.cam.start_acquisition()
-        for i in range(1):
-            camera_image = self.cam.get_images()[0].reshape(2048,2048).T
-        self.cam.end_acquisition()
-        # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
-        # camera_image = Image.open(camera_image_path)
+        # self.dlp.display_static_image(dlp_image_path)
+        # time.sleep(2)
+        # self.cam.write_exposure(0.2)
+        # self.cam.start_acquisition()
+        # time.sleep(1)
+        # for i in range(1):
+        #     camera_image = self.cam.get_images()[0].reshape(2048,2048).T
+        # self.cam.end_acquisition()
+        camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
+        camera_image = Image.open(camera_image_path)
 
         ## converting the image in greylevels to 0/1 bit format using a threshold
         thresh = 230
@@ -332,24 +332,31 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(centers_camera, centers_dlp, (dlp_image.shape[0], dlp_image.shape[1]), None, None)
         # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)
         ########################
-
+        # dlp_to_camera_matrix = cv2.findHomography(centers_dlp, centers_camera )
+        #
+        # x0, y0, x1, y1 = centers_dlp[4][0][0]-608/2, centers_dlp[4][0][1]-684/2, centers_dlp[4][0][0]+608/2, centers_dlp[4][0][1]+684/2 
+        #
+        # cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
+        #
+        # draw = ImageDraw.Draw(self.graphcsView)
+        # draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
 
         return self.camera_to_dlp_matrix#, self.camera_distortion_matrix
 
     def display_mode(self, index):
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
-            self.dlp.set_display_mode('static')
+            # self.dlp.set_display_mode('static')
             self.display_mode_subbox_combobox.addItems(['Choose Static Image', 'Generate Static Image from ROI'])
         if index == 1: # internal test pattern
-            self.dlp.set_display_mode('internal')
+            # self.dlp.set_display_mode('internal')
             self.display_mode_subbox_combobox.addItems(['Checkboard small', 'Black', 'White', 'Green', 'Blue', 'Red', 'Vertical lines 1',
                                                         'Horizontal lines 1', 'Vertical lines 2', 'Horizontal lines 2', 'Diagonal lines',
                                                         'Grey Ranp Vertical', 'Grey Ramp Horizontal', 'Checkerboard big'])
         if index == 2: # hdmi video input
             self.display_mode_subbox_combobox.addItem('Choose HDMI Video Sequence')
         if index == 3: # pattern sequence display
-            self.dlp.set_display_mode('pattern')
+            # self.dlp.set_display_mode('pattern')
             self.display_mode_subbox_combobox.addItems(['Choose Pattern Sequence To Load', 'Generate Multiple Images with One ROI Per Image'])
 
     def choose_action(self, index):
@@ -358,10 +365,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if index == 0: ## choose static image
                 img_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
                 img = Image.open(img_path[0])
-                if img.size == (684, 608):
+                if img.size == (608,684):
                     self.dlp.display_static_image(img_path[0])
                 else:
-                    warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix[0],(684, 608))
+                    warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix[0],(608, 684))
+                    center = (608 / 2, 684 / 2)
+                    M = cv2.getRotationMatrix2D(center, 180, 1.0)
+                    warped_image_rotated = cv2.warpAffine(warped_image, M, (608, 684))
                     cv2.imwrite(img_path[0] + 'warped.bmp', warped_image)
                     self.dlp.display_static_image(img_path[0] + 'warped.bmp')
 
@@ -373,11 +383,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
                     # x0,y0,x1,y1 = 0, 0, 1000, 2048
                     draw = ImageDraw.Draw(black_image_with_ROI)
-                    draw.rectangle([(x0+608, y0), (x1+608, y1)], fill="white", outline=None) ## the 608 is for the 100% offset inherent to the dlp
+                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None) ## the 608 is for the 100% offset inherent to the dlp
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                 black_image_with_ROI = np.asarray(black_image_with_ROI)
-                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(684, 608))
-                cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped)
+                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
+
+                center = (608 / 2, 684 / 2)
+                M = cv2.getRotationMatrix2D(center, 180, 1.0)
+                black_image_with_ROI_warped_rotated = cv2.warpAffine(black_image_with_ROI_warped, M, (608, 684))
+
+                cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped_rotated)
 
         ## Internal test pattern mode
         elif self.display_mode_combobox.currentIndex() == 1: ## internal test pattern
