@@ -6,6 +6,11 @@ GUI to control the microscopy setup in the lab.
 
 Changelog
 
+Version 0.2 DLP major implementations
+    Interface redesign. Major rewrite / implementation of DLP functions and its interface with the camera.
+    Added the possibility for the DLP to only illuminate subregions of the field of vue which is controlled from the ROI interface of the camera.
+
+
 Version 0.1.3
 Minor bug correction.
 - Stream function not working, last update broke the reshaping. Fixed it. 
