@@ -334,7 +334,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ########################
         # dlp_to_camera_matrix = cv2.findHomography(centers_dlp, centers_camera )
         #
-        # x0, y0, x1, y1 = centers_dlp[4][0][0]-608/2, centers_dlp[4][0][1]-684/2, centers_dlp[4][0][0]+608/2, centers_dlp[4][0][1]+684/2 
+        # x0, y0, x1, y1 = centers_dlp[4][0][0]-608/2, centers_dlp[4][0][1]-684/2, centers_dlp[4][0][0]+608/2, centers_dlp[4][0][1]+684/2
         #
         # cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
         #
