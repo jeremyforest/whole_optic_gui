@@ -1,39 +1,19 @@
 ## PyQT5
 from PyQt5.QtCore import Qt
-<<<<<<< HEAD
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QInputDialog
-from PyQt5.QtGui import QImage
-=======
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene, QInputDialog
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
->>>>>>> roi
 import pyqtgraph as pg
 from PyQt5.QtTest import QTest
-from whole_optic_gui import Ui_MainWindow
-
-<<<<<<< HEAD
-import numpy as np
-import os, time, sys, time
-import matplotlib.pyplot as plt
 
 from whole_optic_gui import Ui_MainWindow
-import argparse
-=======
+
 ## common dependencies
+import argparse
 import numpy as np
 import os, time, sys, time
 from PIL import Image, ImageDraw, ImageOps
 import cv2
 import matplotlib.pyplot as plt
-
-# own scripts
-import clickable_matplotlib_graph
-from camera.camera_control import MainCamera
-from dlp.dlp_control import Dlp
-# from laser.laser_control import CrystalLaser
-# from controler.manipulator_command import Scope
-
->>>>>>> roi
 
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
@@ -86,7 +66,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
              print("controler function are not loaded")
 
         ##### camera #####
-<<<<<<< HEAD
         if self.activate_camera is True:
             from camera.camera_control import MainCamera
             self.cam = MainCamera()
@@ -105,40 +84,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             from controler.manipulator_command import Scope
             self.scope = Scope()
 
-
-        ## variable reference for later use
-        self.path = None
-        self.simulated = False
-=======
-        if sys.platform == "win32": ## main camera is the hamamatsu camera that only works on windows
-           self.cam = MainCamera()
-        else:
-           print("Main camera / Hamamatsu camera will not work")
-        ##### dlp #####
-        # self.dlp = Dlp()
-        # self.dlp.connect()
-        # ##### laser #####
-        # self.laser = CrystalLaser()
-        # self.laser.connect()
-        # ##### manipulator #####
-        # self.scope = Scope()
-
         ## variable reference for later use
         self.path = None
         self.save_images = False
         self.simulated = True
         self.roi_list = []
         self.camera_to_dlp_matrix = []
-        self.camera_distortion_matrix = []
-
->>>>>>> roi
+        # self.camera_distortion_matrix = []
 
         ## folder widget
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
         self.change_folder_button.clicked.connect(self.change_folder)
 
-        #camera widget
+        ## camera widget
         self.snap_image_button.clicked.connect(self.snap_image)
         self.stream_button.clicked.connect(self.stream)
         self.replay_button.clicked.connect(self.replay)
@@ -147,10 +106,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.subArray_mode_radioButton.toggled.connect(self.subarray)
         self.update_internal_frame_rate_button.clicked.connect(self.update_internal_frame_rate)
 
-        #roi
+        ## roi
         self.save_ROI_button.clicked.connect(self.roi)
         self.reset_ROI_button.clicked.connect(self.reset_roi)
-
         self.saved_ROI_image.ui.histogram.hide()
         self.saved_ROI_image.ui.roiBtn.hide()
         self.saved_ROI_image.ui.menuBtn.hide()
@@ -194,13 +152,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.current_folder_label_2.setText(str(self.path))
 
     def initialize_experiment(self):
-<<<<<<< HEAD
         self.path = QFileDialog.getExistingDirectory(None, 'Select a folder where you want to store your data:', 'C:/', QFileDialog.ShowDirsOnly)
         date = time.strftime("%Y_%m_%d")
-=======
-        self.path = QFileDialog.getExistingDirectory(None, 'Select the parent folder where you want to store your data:', 'C:/', QFileDialog.ShowDirsOnly)
-        date = time.strftime("%d_%m_%Y")
->>>>>>> roi
         self.path = os.path.join(self.path, date)
         if not os.path.exists(self.path):
             os.makedirs(self.path) ## make a folder with the date of today if it does not already exists
@@ -222,7 +175,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def save_as_png(self, array, image_name):
         plt.imsave('{}{}.png'.format(self.path, image_name), array, cmap='gray')
 
-<<<<<<< HEAD
     def snap_image(self): ## only takes an image and saves it
         self.cam.start_acquisition()
         self.images.self.cam.get_images()
@@ -232,32 +184,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.graphicsView.setImage(self.image_reshaped)
         image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
         self.save_as_png(self.image, image_name)
-=======
-        ##get camera parameters     ## get camera parameters to show up in the GUI at initialization
-        ## binning, exposure time, array size    what else ?
-        ## current dlp dsplay mode
-        ## laser state
-
->>>>>>> roi
 
     def stream(self):
         if self.simulated:
-<<<<<<< HEAD
-            for i in range(10):
-                self.image = np.random.rand(256, 256)
-=======
             for i in range(1):
                 self.image = np.random.rand(2048, 2048).T
                 self.image_reshaped = self.image
-    #            timer = pg.QtCore.QTimer(self)  ## timer for updating the image displayed
-    #            timer.timeout.connect(self.update)
-    #            timer.start(0.01)
->>>>>>> roi
                 self.graphicsView.setImage(self.image)
                 pg.QtGui.QApplication.processEvents()
         else:
             self.cam.start_acquisition()
-<<<<<<< HEAD
             self.image_list = []
             for i in range(1000):
                 self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
@@ -269,38 +205,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                                         int(self.y_dim/self.binning)) ## image needs reshaping for show
                 for j in range(len(self.images)): ## for saving later
                     self.image_list.append(self.images[j])
-=======
-            for i in range(100):
-
-                self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
-                if self.images == []:
-                    QTest.qWait(500) ## temporary hack - doesn't really work for long exposure time
-                    self.images = self.cam.get_images()
-                self.image = self.images[0]  ## keeping only the 1st for projetion
-                self.image_reshaped = self.image.reshape(2048, 2048).T ## needs reshaping
-
-            ### the timer makes it impossible to get new images for whatever reason, when end_acquisition is here and when I
-            ### remove it it works but super slow
-#            timer = pg.QtCore.QTimer(self)
-#            timer.timeout.connect(self.update)
-#            timer.start(0.01)
-
->>>>>>> roi
                 self.graphicsView.setImage(self.image_reshaped)
                 pg.QtGui.QApplication.processEvents()
             self.cam.end_acquisition()
 
-<<<<<<< HEAD
         if self.saving_check.isChecked():
             self.save(self.image_list, self.path)
 
-    def save(self, images, path): ### npy format
-        for i in range(len(images)):
-            image = images[i]
-=======
     def roi(self):
         axes = (0, 1)
-        # self.saved_ROI_image.setImage(self.image_reshaped) ## get the image into the ROI graphic interface
+        self.saved_ROI_image.setImage(self.image_reshaped) ## get the image into the ROI graphic interface
 
         # data, coords = self.graphicsView.roi.getArrayRegion(self.image_reshaped.view(), self.graphicsView.imageItem, axes, returnMappedCoords=True) ## get the roi data and coords
         # self.roi_list.append(coords)
@@ -319,31 +233,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def reset_roi(self):
         self.saved_ROI_image.getView().clear()
-        # self.saved_ROI_image.setImage(self.image_reshaped)
+        self.saved_ROI_image.setImage(self.image_reshaped)
         self.roi_list = []
         self.ROI_label_placeholder.setText(str(0))
 
-#    def update(self):  ## need to put that in its own thread
-#        simulated = False
-##        if self.saving_check == Qt.Checked:
-##            save_images = True
-#        if simulated:
-#            for i in range(50):
-#                self.image = np.random.rand(256, 256)
-#                self.graphicsView.setImage(self.image)
-##                if save_images:
-##                    self.save(self.images, i, self.path)
-#        else:
-#            for i in range(50):
-#                self.images = self.cam.get_images() ## gettint the images, it can be 1 but also many images grabbed at once
-#                self.image = self.images[0]  ## keeping only the 1st image for projection
-#                self.image_reshaped = self.image.reshape(2048, 2048) ## needs reshaping
-#                self.graphicsView.setImage(self.image_reshaped)
-
-    def save(self, images, i, path): ### npy format
+    def save(self, images, path): ### npy format
         for y in range(len(images)):
             image = images[y]
->>>>>>> roi
             np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
             print("saved file")
 
@@ -393,17 +289,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.internal_frame_rate_label.setText(str(self.internal_frame_rate))
 
 
-
-
-
     ####################
     ##### DLP part #####
     ####################
     def calibration(self):
         ## dlp img
         ## will ask for the calibration image of the dlp
-        # dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
-        dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
+        dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
+        # dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
         dlp_image = Image.open(dlp_image_path)
         dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
         dlp_image = np.asarray(dlp_image)
@@ -415,21 +308,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp) ## if ever need to put chessboard
 
         ## projecting the calibration image with the dlp to get the camera image
-        # self.dlp.display_static_image(dlp_image_path)
-        # time.sleep(2)
-        # self.cam.write_exposure(0.2)
-        # self.cam.start_acquisition()
-        # time.sleep(1)
-        # for i in range(1):
-        #     camera_image = self.cam.get_images()[0].reshape(2048,2048).T
-        # self.cam.end_acquisition()
-        camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
-        camera_image = Image.open(camera_image_path)
+        self.dlp.display_static_image(dlp_image_path)
+        time.sleep(2)
+        self.cam.write_exposure(0.2)
+        self.cam.start_acquisition()
+        time.sleep(1)
+        for i in range(1):
+            camera_image = self.cam.get_images()[0].reshape(2048,2048).T
+        self.cam.end_acquisition()
+        # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
+        # camera_image = Image.open(camera_image_path)
 
         ## converting the image in greylevels to 0/1 bit format using a threshold
         thresh = 230
         fn = lambda x : 255 if x > thresh else 0
-        # camera_image = Image.fromarray(camera_image)
+        camera_image = Image.fromarray(camera_image)
         camera_image = camera_image.convert('L').point(fn, mode='1')
         camera_image = ImageOps.invert(camera_image.convert('RGB'))
         camera_image = np.asarray(camera_image)
@@ -443,8 +336,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         params.filterByConvexity = False
         params.minCircularity = 0.2
         detector = cv2.SimpleBlobDetector_create(params)
-        keypoints = detector.detect(camera_image)
-
+        # keypoints = detector.detect(camera_image)
         isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
         if isFound_camera:
             print('found {} circle centers on images'.format(len(centers_camera)))
@@ -483,31 +375,30 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(centers_camera, centers_dlp, (dlp_image.shape[0], dlp_image.shape[1]), None, None)
         # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)
         ########################
+
+        ## getting the outline of the dlp onto the camera interface ##
         # dlp_to_camera_matrix = cv2.findHomography(centers_dlp, centers_camera )
-        #
         # x0, y0, x1, y1 = centers_dlp[4][0][0]-608/2, centers_dlp[4][0][1]-684/2, centers_dlp[4][0][0]+608/2, centers_dlp[4][0][1]+684/2
-        #
         # cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
-        #
         # draw = ImageDraw.Draw(self.graphcsView)
         # draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
 
-        return self.camera_to_dlp_matrix#, self.camera_distortion_matrix
+        return self.camera_to_dlp_matrix
 
     def display_mode(self, index):
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
-            # self.dlp.set_display_mode('static')
+            self.dlp.set_display_mode('static')
             self.display_mode_subbox_combobox.addItems(['Choose Static Image', 'Generate Static Image from ROI'])
         if index == 1: # internal test pattern
-            # self.dlp.set_display_mode('internal')
+            self.dlp.set_display_mode('internal')
             self.display_mode_subbox_combobox.addItems(['Checkboard small', 'Black', 'White', 'Green', 'Blue', 'Red', 'Vertical lines 1',
                                                         'Horizontal lines 1', 'Vertical lines 2', 'Horizontal lines 2', 'Diagonal lines',
                                                         'Grey Ranp Vertical', 'Grey Ramp Horizontal', 'Checkerboard big'])
         if index == 2: # hdmi video input
             self.display_mode_subbox_combobox.addItem('Choose HDMI Video Sequence')
         if index == 3: # pattern sequence display
-            # self.dlp.set_display_mode('pattern')
+            self.dlp.set_display_mode('pattern')
             self.display_mode_subbox_combobox.addItems(['Choose Pattern Sequence To Load', 'Generate Multiple Images with One ROI Per Image'])
 
     def choose_action(self, index):
@@ -534,7 +425,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
                     # x0,y0,x1,y1 = 0, 0, 1000, 2048
                     draw = ImageDraw.Draw(black_image_with_ROI)
-                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None) ## the 608 is for the 100% offset inherent to the dlp
+                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                 black_image_with_ROI = np.asarray(black_image_with_ROI)
                 black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
@@ -613,15 +504,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def laser_off(self):
         self.laser.turn_off()
 
-<<<<<<< HEAD
-    #######################
-    #### Controler part ####
-    #######################
-=======
+
     ########################
     #### Controler part ####
     ########################
->>>>>>> roi
+
     def left(self):
         self.scope.move_left()
 
@@ -647,7 +534,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #### Clean exit ####
     ####################
     def bye(self):
-<<<<<<< HEAD
         if self.activate_camera is True:
             self.cam.shutdown()
         if self.activate_laser is True:
@@ -656,11 +542,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.dlp.disconnect()
         if self.activate_controller is True:
             pass
-=======
-        # self.cam.shutdown()
-        # self.dlp.disconnect()
-        # self.laser.disconnect()
->>>>>>> roi
         sys.exit()
 
 
