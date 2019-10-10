@@ -10,7 +10,8 @@ from whole_optic_gui import Ui_MainWindow
 ## common dependencies
 import argparse
 import numpy as np
-import os, time, sys
+import time
+import os, sys
 from PIL import Image, ImageDraw, ImageOps
 import cv2
 import matplotlib.pyplot as plt
@@ -92,6 +93,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.roi_list = []
         self.camera_to_dlp_matrix = []
         self.camera_distortion_matrix = []
+        self.dlp_image_path = []
 
         ## folder widget
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
@@ -201,21 +203,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cam.start_acquisition()
             self.image_list = []
             for i in range(1000):
-                if:
-                    self.stop_stream_button.clicked.connect(self.stop_stream)
-                else:
-                    self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
-                    while self.images == []:
-                        QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
-                            self.images = self.cam.get_images()
-                    self.image = self.images[0]  ## keeping only the 1st for projection
-                    self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                            int(self.y_dim/self.binning)) ## image needs reshaping for show
-                    for j in range(len(self.images)): ## for saving later
-                        self.image_list.append(self.images[j])
-                    self.graphicsView.setImage(self.image_reshaped)
-                    pg.QtGui.QApplication.processEvents()
-                self.cam.end_acquisition()
+                self.stop_stream_button.clicked.connect(self.stop_stream)
+                self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
+                while self.images == []:
+                    QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
+                    self.images = self.cam.get_images()
+                self.image = self.images[0]  ## keeping only the 1st for projection
+                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
+                for j in range(len(self.images)): ## for saving later
+                    self.image_list.append(self.images[j])
+                self.graphicsView.setImage(self.image_reshaped)
+                pg.QtGui.QApplication.processEvents()
+            self.cam.end_acquisition()
 
         if self.saving_check.isChecked():
             self.save(self.image_list, self.path)
@@ -419,16 +419,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## Static image mode
         if self.display_mode_combobox.currentIndex() == 0: ## load image
             if index == 0: ## choose static image
-                img_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
-                img = Image.open(img_path[0])
+                self.dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
+                img = Image.open(self.dlp_image_path[0])
                 if img.size == (608,684):
-                    # self.dlp.display_static_image(img_path[0])
-                    pass
+                    self.dlp.display_static_image(self.dlp_image_path[0])
+                    self.dlp.set_display_mode('internal')
+                    self.dlp.black()
                 else:
                     warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix[0],(608, 684))
                     warped_flipped_image = cv2.flip(warped_image, 0)
-                    cv2.imwrite(img_path[0] + 'warped.bmp', warped_flipped_image)
-                    # self.dlp.display_static_image(img_path[0] + 'warped.bmp')
+                    cv2.imwrite(self.dlp_image_path[0] + 'warped.bmp', warped_flipped_image)
+                    # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
 
             elif index == 1:  ##generate static image from ROI
                 black_image = Image.new('1', (2048,2048), color=0) ## need to make this dependant upon fov size and not 2048
@@ -441,14 +442,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                 black_image_with_ROI = np.asarray(black_image_with_ROI)
-                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, camera_to_dlp_matrix[0],(608,684))
+                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
 
                 # center = (608 / 2, 684 / 2)
                 # M = cv2.getRotationMatrix2D(center, 180, 1.0)
                 # black_image_with_ROI_warped_rotated = cv2.warpAffine(black_image_with_ROI_warped, M, (608, 684))
 
                 black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
-                cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped_rotated)
+                cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped_flipped)
 
             elif index == 2: ## display static image
                 start_delay, ok = QInputDialog.getInt(self,"delay before starting the stimulation","enter a number in s")
@@ -457,14 +458,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 repetition_number, ok = QInputDialog.getInt(self,"number of repetitions","enter an integer number")
 
                 time.sleep(start_delay)
-                for rep in repetition_number:
+                for rep in range(repetition_number):
                     self.dlp.set_display_mode('internal')
                     self.dlp.black()
                     time.sleep(time_wait/1000)
                     self.dlp.set_display_mode('static')
-                    self.dlp.display_static_image(img_path[0])
                     time.sleep(time_stim/1000)
-
+                    self.dlp.set_display_mode('internal')
+                    self.dlp.black()
 
 
         ## Internal test pattern mode
@@ -505,7 +506,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
             if index == 1: # Choose Pattern Sequence To Load
-                time, ok = QInputDialog.getInt(self, 'Input Dialog', 'Duration of pattern exposition (in µs)')   ## time to be given in microseconds
+                time_stim, ok = QInputDialog.getInt(self, 'Input Dialog', 'Duration of pattern exposition (in µs)')   ## time to be given in microseconds
                 image_folder = QFileDialog.getExistingDirectory(self, 'Select Image Folder where DLP images are stored')
                 InputTriggerDelay = 0
                 AutoTriggerPeriod = 3333334

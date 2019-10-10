@@ -5,6 +5,10 @@ GUI to control the microscopy setup in the lab.
 
 Changelog
 
+Version 0.2.2 more bug fixes
+  Fixed several bug fixes for normal function of the program
+  Also modified the on/off frequency control of the dlp to load in the dlp when selecting the image
+
 Version 0.2.1 bug fixes
   The merge to 0.2 induced a lot of bugs that needed fixing.
     Corrected the added text from the merge done wrong.
