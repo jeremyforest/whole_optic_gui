@@ -10,10 +10,11 @@ from whole_optic_gui import Ui_MainWindow
 ## common dependencies
 import argparse
 import numpy as np
-import os, time, sys, time
+import os, time, sys
 from PIL import Image, ImageDraw, ImageOps
 import cv2
 import matplotlib.pyplot as plt
+
 
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
@@ -87,10 +88,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## variable reference for later use
         self.path = None
         self.save_images = False
-        self.simulated = True
+        self.simulated = False
         self.roi_list = []
         self.camera_to_dlp_matrix = []
-        # self.camera_distortion_matrix = []
+        self.camera_distortion_matrix = []
 
         ## folder widget
         self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
@@ -141,7 +142,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def initialize_hardware(self):
         # initialize camera parameters
         self.x_dim = self.cam.get_subarray_size()[1]
+        self.x_init = self.cam.get_subarray_size()[0]
         self.y_dim = self.cam.get_subarray_size()[3]
+        self.y_init = self.cam.get_subarray_size()[2]
         self.binning = self.cam.read_binning()
         self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
         self.subarray_label.setText(str(self.cam.get_subarray_size()))
@@ -177,18 +180,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def snap_image(self): ## only takes an image and saves it
         self.cam.start_acquisition()
-        self.images.self.cam.get_images()
-        self.image = self.images
-        self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                int(self.y_dim/self.binning)) ## image needs reshaping
-        self.graphicsView.setImage(self.image_reshaped)
-        image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
-        self.save_as_png(self.image, image_name)
+        for i in range(1):
+            self.images = self.cam.get_images()
+            self.cam.end_acquisition()
+            self.image = self.images[0]
+            self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                    int(self.y_dim/self.binning)) ## image needs reshaping
+            self.graphicsView.setImage(self.image_reshaped)
+            image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
+            self.save_as_png(self.image_reshaped, image_name)
 
     def stream(self):
         if self.simulated:
             for i in range(1):
-                self.image = np.random.rand(2048, 2048).T
+                self.image = np.random.rand(2048, 2048)
                 self.image_reshaped = self.image
                 self.graphicsView.setImage(self.image)
                 pg.QtGui.QApplication.processEvents()
@@ -196,21 +201,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cam.start_acquisition()
             self.image_list = []
             for i in range(1000):
-                self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
-                while self.images == []:
-                    QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
-                    self.images = self.cam.get_images()
-                self.image = self.images[0]  ## keeping only the 1st for projetion
-                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
-                for j in range(len(self.images)): ## for saving later
-                    self.image_list.append(self.images[j])
-                self.graphicsView.setImage(self.image_reshaped)
-                pg.QtGui.QApplication.processEvents()
-            self.cam.end_acquisition()
+                if:
+                    self.stop_stream_button.clicked.connect(self.stop_stream)
+                else:
+                    self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
+                    while self.images == []:
+                        QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
+                            self.images = self.cam.get_images()
+                    self.image = self.images[0]  ## keeping only the 1st for projection
+                    self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                            int(self.y_dim/self.binning)) ## image needs reshaping for show
+                    for j in range(len(self.images)): ## for saving later
+                        self.image_list.append(self.images[j])
+                    self.graphicsView.setImage(self.image_reshaped)
+                    pg.QtGui.QApplication.processEvents()
+                self.cam.end_acquisition()
 
         if self.saving_check.isChecked():
             self.save(self.image_list, self.path)
+
+    def stop_stream(self):
+        self.cam.end_acquisition()
 
     def roi(self):
         axes = (0, 1)
@@ -220,7 +231,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # self.roi_list.append(coords)
 
         roi_state = self.graphicsView.roi.getState()
-        print(roi_state)
+        # print(roi_state)
+        roi_state['pos'][0] = roi_state['pos'][0] + self.x_init
+        roi_state['pos'][1] = roi_state['pos'][1] + self.y_init
         self.roi_list.append(roi_state)
 
         pen = QPen(Qt.red, 0.1) ## draw on the image to represent the roi
@@ -238,8 +251,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ROI_label_placeholder.setText(str(0))
 
     def save(self, images, path): ### npy format
-        for y in range(len(images)):
-            image = images[y]
+        for i in range(len(images)):
+            image = images[i]
             np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
             print("saved file")
 
@@ -255,7 +268,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                                         int(self.y_dim/self.binning)) ## image needs reshaping for show
                 images.append(image_reshaped)
             for img in images:
-                self.graphicsView.setImage(img.T)
+                self.graphicsView.setImage(img)
                 pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in its own thread with the update function ?
 
     def exposure_time(self, value):
@@ -282,6 +295,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.y_init,ok = QInputDialog.getInt(self,"new y origin value","enter a number")
             self.y_dim,ok = QInputDialog.getInt(self,"new y dimension value","enter a number")
             self.cam.write_subarray_size(self.x_init, self.x_dim, self.y_init, self.y_dim)
+            self.cam.write_subarray_size(self.x_init, self.x_dim, self.y_init, self.y_dim) ## updating 2 times as 1 time sometimes doesn't work
             self.subarray_label.setText(str(self.cam.get_subarray_size()))
 
     def update_internal_frame_rate(self):
@@ -314,7 +328,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cam.start_acquisition()
         time.sleep(1)
         for i in range(1):
-            camera_image = self.cam.get_images()[0].reshape(2048,2048).T
+            camera_image = self.cam.get_images()[0].reshape(self.x_dim,self.y_dim).T
         self.cam.end_acquisition()
         # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
         # camera_image = Image.open(camera_image_path)
@@ -373,7 +387,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # centers_dlp = centers_dlp.astype('float32')
 
         # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(centers_camera, centers_dlp, (dlp_image.shape[0], dlp_image.shape[1]), None, None)
-        # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)
+        # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)  # example of how to undistord an image
         ########################
 
         ## getting the outline of the dlp onto the camera interface ##
@@ -389,7 +403,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
             self.dlp.set_display_mode('static')
-            self.display_mode_subbox_combobox.addItems(['Choose Static Image', 'Generate Static Image from ROI'])
+            self.display_mode_subbox_combobox.addItems(['Load Static Image', 'Generate Static Image from ROI', 'Display Static Image'])
         if index == 1: # internal test pattern
             self.dlp.set_display_mode('internal')
             self.display_mode_subbox_combobox.addItems(['Checkboard small', 'Black', 'White', 'Green', 'Blue', 'Red', 'Vertical lines 1',
@@ -403,19 +417,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def choose_action(self, index):
         ## Static image mode
-        if self.display_mode_combobox.currentIndex() == 0: ## static image
+        if self.display_mode_combobox.currentIndex() == 0: ## load image
             if index == 0: ## choose static image
                 img_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.jpg *.bmp)")
                 img = Image.open(img_path[0])
                 if img.size == (608,684):
-                    self.dlp.display_static_image(img_path[0])
+                    # self.dlp.display_static_image(img_path[0])
+                    pass
                 else:
                     warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix[0],(608, 684))
-                    center = (608 / 2, 684 / 2)
-                    M = cv2.getRotationMatrix2D(center, 180, 1.0)
-                    warped_image_rotated = cv2.warpAffine(warped_image, M, (608, 684))
-                    cv2.imwrite(img_path[0] + 'warped.bmp', warped_image)
-                    self.dlp.display_static_image(img_path[0] + 'warped.bmp')
+                    warped_flipped_image = cv2.flip(warped_image, 0)
+                    cv2.imwrite(img_path[0] + 'warped.bmp', warped_flipped_image)
+                    # self.dlp.display_static_image(img_path[0] + 'warped.bmp')
 
             elif index == 1:  ##generate static image from ROI
                 black_image = Image.new('1', (2048,2048), color=0) ## need to make this dependant upon fov size and not 2048
@@ -423,18 +436,36 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 for nb in range(len(self.roi_list)):
                     x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
-                    # x0,y0,x1,y1 = 0, 0, 1000, 2048
+                    # x0,y0,x1,y1 = 100,800, 1000, 1000
                     draw = ImageDraw.Draw(black_image_with_ROI)
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                 black_image_with_ROI = np.asarray(black_image_with_ROI)
-                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
+                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, camera_to_dlp_matrix[0],(608,684))
 
-                center = (608 / 2, 684 / 2)
-                M = cv2.getRotationMatrix2D(center, 180, 1.0)
-                black_image_with_ROI_warped_rotated = cv2.warpAffine(black_image_with_ROI_warped, M, (608, 684))
+                # center = (608 / 2, 684 / 2)
+                # M = cv2.getRotationMatrix2D(center, 180, 1.0)
+                # black_image_with_ROI_warped_rotated = cv2.warpAffine(black_image_with_ROI_warped, M, (608, 684))
 
+                black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
                 cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped_rotated)
+
+            elif index == 2: ## display static image
+                start_delay, ok = QInputDialog.getInt(self,"delay before starting the stimulation","enter a number in s")
+                time_stim, ok = QInputDialog.getInt(self,"duration of stimulus","enter a number in ms")
+                time_wait, ok = QInputDialog.getInt(self,"duration between stimulus","enter a number in ms")
+                repetition_number, ok = QInputDialog.getInt(self,"number of repetitions","enter an integer number")
+
+                time.sleep(start_delay)
+                for rep in repetition_number:
+                    self.dlp.set_display_mode('internal')
+                    self.dlp.black()
+                    time.sleep(time_wait/1000)
+                    self.dlp.set_display_mode('static')
+                    self.dlp.display_static_image(img_path[0])
+                    time.sleep(time_stim/1000)
+
+
 
         ## Internal test pattern mode
         elif self.display_mode_combobox.currentIndex() == 1: ## internal test pattern
@@ -483,7 +514,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             if index == 0: ## Generate Multiple Images with One ROI Per Image
                 for nb in range(len(self.roi_list)):
-                    black_image = Image.new('1', (2048,2048), color=0) ## need to make this dependant upon fov size and not 2048
+                    black_image = Image.new('1', (self.x_dim,self.y_dim), color=0) ## need to make this dependant upon fov size and not 2048
                     black_image_with_ROI = black_image
                     x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
