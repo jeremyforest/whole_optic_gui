@@ -2,19 +2,20 @@
 
 
 GUI to control the microscopy setup in the lab.
+================================================
 
-Changelog (brief):
+__**Changelog (brief):**__
 
-Version 0.3 logging implementation and threading
-  Implemented dlp, laser, camera image timing data logging for synchronization
-  Started implementing threading of DLP, camera and laser control
-  Various bug fixes and moving code around
-  Modified the slider for the exposure time (divided by 10 and increae to 1000 for more control)
-  Implemented absolute coordonate label for the microscope control
+**Version 0.3 logging implementation and threading**
+	* Implemented dlp, laser, camera image timing data logging for synchronization
+	* Started implementing threading of DLP, camera and laser control
+	* Various bug fixes and moving code around
+	* Modified the slider for the exposure time (divided by 10 and increae to 1000 for more control)
+	* Implemented absolute coordonate label for the microscope control
   Started working on some automation for experiment designs
+  Started implementing signal for global synchronisation
 
-
-Version 0.2.2 more bug fixes
+**Version 0.2.2 more bug fixes**
   Fixed several bug fixes for normal function of the program
   Also modified the on/off frequency control of the dlp to load in the dlp when selecting the image
 

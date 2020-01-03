@@ -97,45 +97,45 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.activate_bridge = False
 
         parser = argparse.ArgumentParser(description="hardware to load")
-        parser.add_argument("--camera", default=False, action="store_true" , help="if you want to load the camera functions")
-        parser.add_argument("--laser", default=False, action="store_true" , help="if you want to load the laser functions")
-        parser.add_argument("--dlp", default=False, action="store_true" , help="if you want to load the dlp functions")
-        parser.add_argument("--controler", default=False, action="store_true" , help="if you want to load the controller functions")
-        parser.add_argument("--bridge", default=False, action="store_true", help="if you want to load the bridge and voltage clamp amplifier")
+        parser.add_argument("--camera", default=False, action="store_true" , help="to load the camera functions")
+        parser.add_argument("--laser", default=False, action="store_true" , help="to load the laser functions")
+        parser.add_argument("--dlp", default=False, action="store_true" , help="to load the dlp functions")
+        parser.add_argument("--controler", default=False, action="store_true" , help="to load the controller functions")
+        parser.add_argument("--bridge", default=False, action="store_true", help="to load the bridge and voltage clamp amplifier")
         args = parser.parse_args()
 
         if args.camera is True:
             self.activate_camera = True
         else:
-             print("camera function are not loaded")
+             print("camera functions are not loaded")
 
         if args.laser is True:
             self.activate_laser = True
         else:
-             print("laser function are not loaded")
+             print("laser functions are not loaded")
 
         if args.dlp is True:
             self.activate_dlp = True
         else:
-             print("dlp function are not loaded")
+             print("dlp functions are not loaded")
 
         if args.controler is True:
             self.activate_controller = True
         else:
-             print("controler function are not loaded")
+             print("controler functions are not loaded")
 
         if args.bridge is True:
             self.activate_bridge = True
         else:
-            print("bridge function are not loaded")
+            print("bridge functions are not loaded")
 
         ##### camera #####
         if self.activate_camera is True:
             from camera.camera_control import MainCamera
             self.cam = MainCamera()
-            self.cam.hcam.setPropertyValue('defect_correct_mode', 1)
+            self.cam.hcam.setPropertyValue('defect_correct_mode', 1)  ## necessary ?
             print(self.cam.hcam.getPropertyValue('defect_correct_mode'))
-            self.cam.hcam.setPropertyValue('hot_pixel_correct_level', 2)
+            self.cam.hcam.setPropertyValue('hot_pixel_correct_level', 2)   ## necessary ?
             print(self.cam.hcam.getPropertyValue('hot_pixel_correct_level'))
         ##### dlp #####
         if self.activate_dlp is True:
@@ -354,7 +354,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.timings_logfile_dict['camera'].append(self.times)
     #                print(self.timings_logfile_dict)
                  self.graphicsView.setImage(self.image_reshaped)
-             
+
          self.cam.end_acquisition()
 
          if self.saving_check.isChecked():
