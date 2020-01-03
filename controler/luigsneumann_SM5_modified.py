@@ -3,8 +3,6 @@
 Luigs And Neumann 5 controller from https://github.com/romainbrette/manipulator
 Modified for python3 compatilibility and personnal tweaks as neededself.
 
-
-
 Device class for the Luigs and Neumann SM-5 manipulator controller.
 
 Adapted from Michael Graupner's LandNSM5 class.
@@ -235,7 +233,6 @@ class LuigsNeumann_SM5(SerialDevice):
         while res:
             res = self.send_command('0120', axis, 7)
             res = int(binascii.hexlify(struct.unpack('s', res[6])[0])[1])
-
 
 if __name__ == '__main__':
     sm5 = LuigsNeumann_SM5('COM3')

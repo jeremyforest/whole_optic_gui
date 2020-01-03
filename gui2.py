@@ -1,21 +1,25 @@
 ## PyQT5
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, QThreadPool
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene, QInputDialog
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
-import pyqtgraph as pg
 from PyQt5.QtTest import QTest
+import pyqtgraph as pg
 
+## QTDesigner
 from whole_optic_gui import Ui_MainWindow
 
 ## common dependencies
 import argparse
 import numpy as np
 import time
-import os, sys
+import os
+import sys
 from PIL import Image, ImageDraw, ImageOps
 import cv2
 import matplotlib.pyplot as plt
-
+import json
+from datetime import datetime, timezone
+from multiprocessing import Process
 
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
@@ -23,6 +27,54 @@ def debug_trace():
   from pdb import set_trace
   pyqtRemoveInputHook()
   set_trace()
+
+
+class Worker(QRunnable):
+    '''
+    Worker thread from https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
+
+    Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
+
+    :param callback: The function callback to run on this worker thread. Supplied args and
+                     kwargs will be passed through to the runner.
+    :type callback: function
+    :param args: Arguments to pass to the callback function
+    :param kwargs: Keywords to pass to the callback function
+
+    '''
+
+    def __init__(self, fn, *args, **kwargs):
+        super(Worker, self).__init__()
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        # self.signals = WorkerSignals()
+
+    @pyqtSlot()
+    def run(self):
+        '''
+        Initialise the runner function with passed args, kwargs.
+        '''
+
+        # Retrieve args/kwargs here; and fire processing using them
+        try:
+            result = self.fn(
+                *self.args, **self.kwargs)
+#                status=self.signals.status,
+#                progress=self.signals.progress)
+        except:
+            pass
+#            traceback.print_exc()
+        #     exctype, value = sys.exc_info()[:2]
+        #     self.signals.error.emit((exctype, value, traceback.format_exc()))
+        # else:
+        #     self.signals.result.emit(result)  # Return the result of the processing
+        # finally:
+        #     self.signals.finished.emit()  # Done
+
+
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -34,17 +86,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ##### gui initialization #####
         ###################################
 
+        self.threadpool = QThreadPool()
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+
         ## commande-line options
         self.activate_camera = False
         self.activate_laser = False
         self.activate_dlp = False
         self.activate_controller = False
+        self.activate_bridge = False
 
         parser = argparse.ArgumentParser(description="hardware to load")
         parser.add_argument("--camera", default=False, action="store_true" , help="if you want to load the camera functions")
         parser.add_argument("--laser", default=False, action="store_true" , help="if you want to load the laser functions")
         parser.add_argument("--dlp", default=False, action="store_true" , help="if you want to load the dlp functions")
         parser.add_argument("--controler", default=False, action="store_true" , help="if you want to load the controller functions")
+        parser.add_argument("--bridge", default=False, action="store_true", help="if you want to load the bridge and voltage clamp amplifier")
         args = parser.parse_args()
 
         if args.camera is True:
@@ -67,10 +124,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
              print("controler function are not loaded")
 
+        if args.bridge is True:
+            self.activate_bridge = True
+        else:
+            print("bridge function are not loaded")
+
         ##### camera #####
         if self.activate_camera is True:
             from camera.camera_control import MainCamera
             self.cam = MainCamera()
+            self.cam.hcam.setPropertyValue('defect_correct_mode', 1)
+            print(self.cam.hcam.getPropertyValue('defect_correct_mode'))
+            self.cam.hcam.setPropertyValue('hot_pixel_correct_level', 2)
+            print(self.cam.hcam.getPropertyValue('hot_pixel_correct_level'))
         ##### dlp #####
         if self.activate_dlp is True:
             from dlp.dlp_control import Dlp
@@ -85,20 +151,49 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.activate_controller is True:
             from controler.manipulator_command import Scope
             self.scope = Scope()
+        ##### bridge #####
+        if self.activate_bridge is True:
+            from electrophysiology.ephys_stim_for_gate import Stim
+            self.bridge = Stim()
+            self.bridge.connect()
 
         ## variable reference for later use
         self.path = None
+        self.path_raw_data = None
         self.save_images = False
         self.simulated = False
         self.roi_list = []
         self.camera_to_dlp_matrix = []
         self.camera_distortion_matrix = []
         self.dlp_image_path = []
+        self.calibration_dlp_camera_matrix_path = 'dlp/calibration_matrix.json'
 
-        ## folder widget
-        self.initialize_hardware_button.clicked.connect(self.initialize_hardware)
+        ## folder widget (top left)
+        self.initialize_hardware_button.clicked.connect(self.initialize_hardware) ## will be removed and integrated with loading of each hardware piece
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
         self.change_folder_button.clicked.connect(self.change_folder)
+
+        ## initilizing JSON files
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['laser'] = {}
+        self.timings_logfile_dict['laser']['on'] = []
+        self.timings_logfile_dict['laser']['off'] = []
+        self.timings_logfile_dict['dlp'] = {}
+        self.timings_logfile_dict['dlp']['on'] = []
+        self.timings_logfile_dict['dlp']['off'] = []
+        self.timings_logfile_dict['camera'] = []
+        self.timings_logfile_dict['ephys'] = {}
+        self.timings_logfile_dict['ephys']['on'] = []
+        self.timings_logfile_dict['ephys']['off'] = []
+
+
+        self.info_logfile_dict = {}
+        self.info_logfile_dict['experiment creation date'] = None
+        self.info_logfile_dict['roi'] = []
+        self.info_logfile_dict['exposure time'] = []
+        self.info_logfile_dict['binning'] = []
+        self.info_logfile_dict['fov'] = []
+        self.info_logfile_dict['fps'] = []
 
         ## camera widget
         self.snap_image_button.clicked.connect(self.snap_image)
@@ -115,6 +210,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.saved_ROI_image.ui.histogram.hide()
         self.saved_ROI_image.ui.roiBtn.hide()
         self.saved_ROI_image.ui.menuBtn.hide()
+        self.export_ROI_button.clicked.connect(self.export_roi)
 
         ## dlp widget
         self.display_mode_combobox.activated.connect(self.display_mode)
@@ -137,27 +233,64 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## menu bar connection
         self.actionQuit.triggered.connect(self.bye)
 
+        ## automation
+        self.export_experiment_button.clicked.connect(self.export_experiment)
+        self.load_experiment_button.clicked.connect(self.load_experiment)
+        self.run_experiment_button.clicked.connect(self.run_experiment)
+
+        ## electrophysiology
+        self.stim_button.clicked.connect(self.stim)
+
 
     ###################################
     ########## GUI code ###############
     ###################################
     def initialize_hardware(self):
-        # initialize camera parameters
+        ## initialize camera parameters
+        ## fov
         self.x_dim = self.cam.get_subarray_size()[1]
         self.x_init = self.cam.get_subarray_size()[0]
         self.y_dim = self.cam.get_subarray_size()[3]
         self.y_init = self.cam.get_subarray_size()[2]
+        self.subarray_label.setText(str(self.cam.get_subarray_size()))
+        ## binning
         self.binning = self.cam.read_binning()
         self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
-        self.subarray_label.setText(str(self.cam.get_subarray_size()))
+        ## exposure time
         self.exposure_time_value.display(self.cam.read_exposure())
 
     def change_folder(self):
-        self.path = QFileDialog.getExistingDirectory(None, 'Select the right folder to load the image batch:', 'C:/', QFileDialog.ShowDirsOnly)
+        self.path = QFileDialog.getExistingDirectory(None, 'Select the folder you want the path to change to:',
+                                                        'C:/', QFileDialog.ShowDirsOnly)
+        self.path_raw_data = self.path + '/raw_data'
         self.current_folder_label_2.setText(str(self.path))
 
     def initialize_experiment(self):
-        self.path = QFileDialog.getExistingDirectory(None, 'Select a folder where you want to store your data:', 'C:/', QFileDialog.ShowDirsOnly)
+        ## reinitilize JSON files
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['laser'] = {}
+        self.timings_logfile_dict['laser']['on'] = []
+        self.timings_logfile_dict['laser']['off'] = []
+        self.timings_logfile_dict['dlp'] = {}
+        self.timings_logfile_dict['dlp']['on'] = []
+        self.timings_logfile_dict['dlp']['off'] = []
+        self.timings_logfile_dict['camera'] = []
+        self.timings_logfile_dict['ephys'] = {}
+        self.timings_logfile_dict['ephys']['on'] = []
+        self.timings_logfile_dict['ephys']['off'] = []
+
+        self.info_logfile_dict = {}
+        self.info_logfile_dict['experiment creation date'] = None
+        self.info_logfile_dict['roi'] = []
+        self.info_logfile_dict['exposure time'] = []
+        self.info_logfile_dict['binning'] = []
+        self.info_logfile_dict['fov'] = []
+        self.info_logfile_dict['fps'] = []
+
+        ## generate folder to save the data
+        self.path = QFileDialog.getExistingDirectory(None, 'Select a folder where you want to store your data:',
+                                                        'C:/', QFileDialog.ShowDirsOnly)
+        self.path_raw_data = self.path + '/raw_data'
         date = time.strftime("%Y_%m_%d")
         self.path = os.path.join(self.path, date)
         if not os.path.exists(self.path):
@@ -168,12 +301,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             n += 1
             self.path_temp = os.path.join(self.path, 'experiment_' + str(n))
         self.path = self.path_temp
+        self.path_raw_data = self.path + '/raw_data'
         os.makedirs(self.path)
         os.makedirs(self.path + '/dlp_images')
+        os.makedirs(self.path + '/raw_data')
 
-        with open(self.path + "/experiment_{}_info.txt".format(n),"w+") as f:       ## store basic info and comments
-            f.write(time.asctime(time.localtime(time.time())))
-            f.close()
+        ## generate log files
+        self.info_logfile_path = self.path + "/experiment_{}_info.json".format(n)
+        experiment_time = time.asctime(time.localtime(time.time()))
+        self.info_logfile_dict['experiment creation date'] = experiment_time
+        with open(self.info_logfile_path,"w+") as file:       ## store basic info and comments
+            json.dump(self.info_logfile_dict, file)
+
+        self.timings_logfile_path = self.path + "/experiment_{}_timings.json".format(n)
+        with open(self.timings_logfile_path, "w+") as file:
+            json.dump(self.timings_logfile_dict, file)
 
         self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI
 
@@ -183,7 +325,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def snap_image(self): ## only takes an image and saves it
         self.cam.start_acquisition()
         for i in range(1):
-            self.images = self.cam.get_images()
+            self.images, self.times = self.cam.get_images()
             self.cam.end_acquisition()
             self.image = self.images[0]
             self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
@@ -192,33 +334,99 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
             self.save_as_png(self.image_reshaped, image_name)
 
-    def stream(self):
-        if self.simulated:
-            for i in range(1):
-                self.image = np.random.rand(2048, 2048)
-                self.image_reshaped = self.image
-                self.graphicsView.setImage(self.image)
-                pg.QtGui.QApplication.processEvents()
-        else:
-            self.cam.start_acquisition()
-            self.image_list = []
-            for i in range(1000):
-                self.stop_stream_button.clicked.connect(self.stop_stream)
-                self.images = self.cam.get_images() ## getting the images, sometimes its one other can be more
-                while self.images == []:
-                    QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
-                    self.images = self.cam.get_images()
-                self.image = self.images[0]  ## keeping only the 1st for projection
-                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
-                for j in range(len(self.images)): ## for saving later
-                    self.image_list.append(self.images[j])
-                self.graphicsView.setImage(self.image_reshaped)
-                pg.QtGui.QApplication.processEvents()
-            self.cam.end_acquisition()
+    def processing_images(self):
+         self.cam.start_acquisition()
+         for i in range(1500):
+             print(i)
+             if self.stop_stream_button.clicked.connect(self.stop_stream):
+                 pass
+             else:
+                 self.images, self.times = self.cam.get_images() ## getting the images, sometimes its one other can be more
+                 while self.images == []:
+                     QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
+                     self.images, self.times = self.cam.get_images()
+                 self.image = self.images[0]  ## keeping only the 1st for projection
+                 self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                         int(self.y_dim/self.binning)) ## image needs reshaping for show
+                 if self.saving_check.isChecked():
+                    for j in range(len(self.images)): ## for saving later
+                        self.image_list.append(self.images[j])
+                    self.timings_logfile_dict['camera'].append(self.times)
+    #                print(self.timings_logfile_dict)
+                 self.graphicsView.setImage(self.image_reshaped)
+             
+         self.cam.end_acquisition()
 
-        if self.saving_check.isChecked():
-            self.save(self.image_list, self.path)
+         if self.saving_check.isChecked():
+             ## saving images
+             save_images_worker = Worker(self.save, self.image_list, self.path_raw_data)
+             self.threadpool.start(save_images_worker)
+             ## saving images times
+             with open(self.timings_logfile_path, "w") as file:
+                 file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
+             self.info_logfile_dict['roi'].append(self.roi_list)
+             self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
+             self.info_logfile_dict['binning'].append(self.binning)
+             self.info_logfile_dict['fps'].append(self.internal_frame_rate)
+             self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
+             with open(self.info_logfile_path, "w") as file:
+                 file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+
+    def stream(self):
+         self.images = []
+         self.image_list = []
+         self.timings_logfile_dict['camera'] = []
+         image_processing_worker = Worker(self.processing_images)
+         self.threadpool.start(image_processing_worker)
+
+#    def stream(self):
+#        if self.simulated:
+#            for i in range(1):
+#                self.image = np.random.rand(2048, 2048)
+#                self.image_reshaped = self.image
+#                self.graphicsView.setImage(self.image)
+#                pg.QtGui.QApplication.processEvents()
+#        else:
+#            self.images = []
+#            self.timings_logfile_dict['camera'] = []
+#            self.image_list = []
+#
+#            self.cam.start_acquisition()
+#            for i in range(100):
+#                self.stop_stream_button.clicked.connect(self.stop_stream)
+#                self.images, self.times = self.cam.get_images() ## getting the images, sometimes its one other can be more
+#                while self.images == []:
+#                    QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
+#                    self.images, self.times = self.cam.get_images()
+#                print(self.images)
+#                print(self.times)
+#                self.image = self.images[0]  ## keeping only the 1st for projection
+#                print(self.image)
+#                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+#                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
+#                if self.saving_check.isChecked():
+#                    for j in range(len(self.images)): ## for saving later
+#                        self.image_list.append(self.images[j])
+#                    self.timings_logfile_dict['camera'].append(self.times)
+#
+#                self.graphicsView.setImage(self.image_reshaped)
+#                pg.QtGui.QApplication.processEvents()
+#            self.cam.end_acquisition()
+#
+#        if self.saving_check.isChecked():
+#            ## saving images
+#            self.save(self.image_list, self.path_raw_data)
+#            ## saving images times
+#            with open(self.timings_logfile_path, "w") as file:
+#                file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
+#
+#            self.info_logfile_dict['roi'].append(self.roi_list)
+#            self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
+#            self.info_logfile_dict['binning'].append(self.binning)
+#            self.info_logfile_dict['fps'].append(self.internal_frame_rate)
+#            self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
+#            with open(self.info_logfile_path, "w") as file:
+#                file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
 
     def stop_stream(self):
         self.cam.end_acquisition()
@@ -243,6 +451,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                 angle = self.roi_list[nb]['angle'], pen=pen, movable=False, removable=False)
             self.saved_ROI_image.getView().addItem(r)
         self.ROI_label_placeholder.setText(str(len(self.roi_list)))
+
+    def export_roi(self):
+        self.info_logfile_dict['roi'].append(self.roi_list)
+        with open(self.info_logfile_path, 'w') as file:
+            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
 
     def reset_roi(self):
         self.saved_ROI_image.getView().clear()
@@ -272,7 +485,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in its own thread with the update function ?
 
     def exposure_time(self, value):
-        value /= 100
+        value /= 1000
         self.cam.write_exposure(value)
         read_value = self.cam.read_exposure()
         self.exposure_time_value.display(read_value)
@@ -307,58 +520,65 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ##### DLP part #####
     ####################
     def calibration(self):
-        ## dlp img
-        ## will ask for the calibration image of the dlp
-        dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
-        # dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/Calibration_9pts.bmp"
-        dlp_image = Image.open(dlp_image_path)
-        dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
-        dlp_image = np.asarray(dlp_image)
-        dlp_image = cv2.resize(dlp_image, (608,684))
-        shape = (3, 3)
-        isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
-        if isFound_dlp:
-            print('found {} circle centers on images'.format(len(centers_dlp)))
-        # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp) ## if ever need to put chessboard
+        if os.path.isfile(self.calibration_dlp_camera_matrix_path):
+            print('Calibration matrix already exists, using it as reference')
+            self.calibration_dlp_camera_matrix_path = 'C:/Users/barral/Desktop/whole_optic_gui-log_implementation_and_threading/dlp/calibration_matrix.json'
+            with open(self.calibration_dlp_camera_matrix_path) as file:
+                self.camera_to_dlp_matrix = np.array(json.load(file))
+        else:
+            print('Calibration matrix doesnt exist. Generating calibration now')
+            ## dlp img
+            ## will ask for the calibration image of the dlp
+            dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
+            # dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/calibration_images/Calibration_9pts.bmp"
+            dlp_image = Image.open(dlp_image_path)
+            dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
+            dlp_image = np.asarray(dlp_image)
+            dlp_image = cv2.resize(dlp_image, (608,684))
+            shape = (3, 3)
+            isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
+            if isFound_dlp:
+                print('found {} circle centers on images'.format(len(centers_dlp)))
+            # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp) ## if ever need to put chessboard
 
-        ## projecting the calibration image with the dlp to get the camera image
-        self.dlp.display_static_image(dlp_image_path)
-        time.sleep(2)
-        self.cam.write_exposure(0.2)
-        self.cam.start_acquisition()
-        time.sleep(1)
-        for i in range(1):
-            camera_image = self.cam.get_images()[0].reshape(self.x_dim,self.y_dim).T
-        self.cam.end_acquisition()
-        # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
-        # camera_image = Image.open(camera_image_path)
+            ## projecting the calibration image with the dlp to get the camera image
+            self.dlp.display_static_image(dlp_image_path)
+            time.sleep(2)
+            self.cam.write_exposure(0.10)
+            self.cam.start_acquisition()
+            time.sleep(1)
+            for i in range(1):
+                camera_image = self.cam.get_images()[0][0].reshape(self.x_dim,self.y_dim).T
+            self.cam.end_acquisition()
+            # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
+            # camera_image = Image.open(camera_image_path)
 
-        ## converting the image in greylevels to 0/1 bit format using a threshold
-        thresh = 230
-        fn = lambda x : 255 if x > thresh else 0
-        camera_image = Image.fromarray(camera_image)
-        camera_image = camera_image.convert('L').point(fn, mode='1')
-        camera_image = ImageOps.invert(camera_image.convert('RGB'))
-        camera_image = np.asarray(camera_image)
-        ## need to tune the cv2 detector for the detection of circles in a large image
-        params = cv2.SimpleBlobDetector_Params()
-        params.filterByArea = True
-        params.minArea = 50
-        params.maxArea = 10000
-        params.minDistBetweenBlobs = 20
-        params.filterByColor = True
-        params.filterByConvexity = False
-        params.minCircularity = 0.2
-        detector = cv2.SimpleBlobDetector_create(params)
-        # keypoints = detector.detect(camera_image)
-        isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
-        if isFound_camera:
-            print('found {} circle centers on images'.format(len(centers_camera)))
+            ## converting the image in greylevels to 0/1 bit format using a threshold
+            thresh = 250
+            fn = lambda x : 255 if x > thresh else 0
+            camera_image = Image.fromarray(camera_image)
+            camera_image = camera_image.convert('L').point(fn, mode='1')
+            camera_image = ImageOps.invert(camera_image.convert('RGB'))
+            camera_image = np.asarray(camera_image)
+            ## need to tune the cv2 detector for the detection of circles in a large image
+            params = cv2.SimpleBlobDetector_Params()
+            params.filterByArea = True
+            params.minArea = 100
+            params.maxArea = 10000
+            params.minDistBetweenBlobs = 100
+            params.filterByColor = False
+            params.filterByConvexity = False
+            params.minCircularity = 0.1
+            detector = cv2.SimpleBlobDetector_create(params)
+            # keypoints = detector.detect(camera_image)
+            isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
+            if isFound_camera:
+                print('found {} circle centers on images'.format(len(centers_camera)))
 
-        ## for debug
-        # camera_image_drawn = cv2.drawChessboardCorners(camera_image, shape, centers_camera, isFound_camera)
-        # camera_image_drawn = Image.fromarray(camera_image_drawn)
-        # camera_image_drawn.show()
+            ## for debug
+            camera_image_drawn = cv2.drawChessboardCorners(camera_image, shape, centers_camera, isFound_camera)
+            camera_image_drawn = Image.fromarray(camera_image_drawn)
+            camera_image_drawn.show()
 
         # homography_matrix = cv2.findHomography(centers_camera, centers_dlp)
         # warped_camera_image = cv2.warpPerspective(camera_image, homography_matrix[0], dsize=(608,684))
@@ -366,7 +586,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # warped_camera_image_drawn.show()
 
         ## performing the calculs to get the transformation matrix between the camera image and the dlp image
-        self.camera_to_dlp_matrix = cv2.findHomography(centers_camera, centers_dlp)
+            try:
+                self.camera_to_dlp_matrix = cv2.findHomography(centers_camera, centers_dlp)[0]
+                with open(self.calibration_dlp_camera_matrix_path, "w") as file:
+                    file.write(json.dumps(self.camera_to_dlp_matrix.tolist()))
+            except:
+                pass
+
 
         # four_corners_camera = centers_camera[0],centers_camera[2], centers_camera[6],centers_camera[8]
         # four_corners_camera = np.array([[center for [center] in four_corners_camera]])
@@ -385,9 +611,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #
         # centers_camera = centers_camera.astype('float32') ## opencv is weird and if input are not specifically in float32 it will beug
         # centers_dlp = centers_dlp.astype('float32')
-
+        #
         # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(centers_camera, centers_dlp, (dlp_image.shape[0], dlp_image.shape[1]), None, None)
         # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)  # example of how to undistord an image
+        # Image.fromarray(undist)
         ########################
 
         ## getting the outline of the dlp onto the camera interface ##
@@ -403,17 +630,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
             self.dlp.set_display_mode('static')
-            self.display_mode_subbox_combobox.addItems(['Load Static Image', 'Generate Static Image from ROI', 'Display Static Image'])
+            self.display_mode_subbox_combobox.addItems(['Load Static Image',
+                                                        'Generate Static Image from ROI',
+                                                        'Display Static Image',
+                                                        'Display Stati Image on Timer'])
         if index == 1: # internal test pattern
             self.dlp.set_display_mode('internal')
-            self.display_mode_subbox_combobox.addItems(['Checkboard small', 'Black', 'White', 'Green', 'Blue', 'Red', 'Vertical lines 1',
-                                                        'Horizontal lines 1', 'Vertical lines 2', 'Horizontal lines 2', 'Diagonal lines',
-                                                        'Grey Ranp Vertical', 'Grey Ramp Horizontal', 'Checkerboard big'])
+            self.display_mode_subbox_combobox.addItems(['Checkboard small',
+                                                        'Black',
+                                                        'White',
+                                                        'Green',
+                                                        'Blue',
+                                                        'Red',
+                                                        'Vertical lines 1',
+                                                        'Horizontal lines 1',
+                                                        'Vertical lines 2',
+                                                        'Horizontal lines 2',
+                                                        'Diagonal lines',
+                                                        'Grey Ranp Vertical',
+                                                        'Grey Ramp Horizontal',
+                                                        'Checkerboard big'])
         if index == 2: # hdmi video input
             self.display_mode_subbox_combobox.addItem('Choose HDMI Video Sequence')
         if index == 3: # pattern sequence display
             self.dlp.set_display_mode('pattern')
-            self.display_mode_subbox_combobox.addItems(['Choose Pattern Sequence To Load', 'Generate Multiple Images with One ROI Per Image'])
+            self.display_mode_subbox_combobox.addItems(['Choose Pattern Sequence To Load',
+                                                        'Choose Pattern Sequence To Display',
+                                                        'Generate Multiple Images with One ROI Per Image'])
 
     def choose_action(self, index):
         ## Static image mode
@@ -426,7 +669,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.dlp.set_display_mode('internal')
                     self.dlp.black()
                 else:
-                    warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix[0],(608, 684))
+                    warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix,(608, 684))
                     warped_flipped_image = cv2.flip(warped_image, 0)
                     cv2.imwrite(self.dlp_image_path[0] + 'warped.bmp', warped_flipped_image)
                     # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
@@ -442,62 +685,85 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                 black_image_with_ROI = np.asarray(black_image_with_ROI)
-                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
+                black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix,(608,684))
 
-                # center = (608 / 2, 684 / 2)
-                # M = cv2.getRotationMatrix2D(center, 180, 1.0)
-                # black_image_with_ROI_warped_rotated = cv2.warpAffine(black_image_with_ROI_warped, M, (608, 684))
+                center = (608 / 2, 684 / 2)
+                M = cv2.getRotationMatrix2D(center, 270, 1.0)
+                black_image_with_ROI_warped = cv2.warpAffine(black_image_with_ROI_warped, M, (608, 684))
 
                 black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
                 cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped' + '.bmp', black_image_with_ROI_warped_flipped)
 
-            elif index == 2: ## display static image
-                start_delay, ok = QInputDialog.getInt(self,"delay before starting the stimulation","enter a number in s")
-                time_stim, ok = QInputDialog.getInt(self,"duration of stimulus","enter a number in ms")
-                time_wait, ok = QInputDialog.getInt(self,"duration between stimulus","enter a number in ms")
-                repetition_number, ok = QInputDialog.getInt(self,"number of repetitions","enter an integer number")
+            elif index == 2: ### display static image
+                self.dlp.set_display_mode('static')
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
 
-                time.sleep(start_delay)
-                for rep in range(repetition_number):
-                    self.dlp.set_display_mode('internal')
-                    self.dlp.black()
-                    time.sleep(time_wait/1000)
-                    self.dlp.set_display_mode('static')
-                    time.sleep(time_stim/1000)
-                    self.dlp.set_display_mode('internal')
-                    self.dlp.black()
+            elif index == 3: ## display static image on on/off timer set by the user
+#                start_delay, ok = QInputDialog.getInt(self,"delay before starting the stimulation","enter a number in s")
+#                time_stim, ok = QInputDialog.getInt(self,"duration of stimulus","enter a number in ms")
+#                time_wait, ok = QInputDialog.getInt(self,"duration between stimulus","enter a number in ms")
+#                repetition_number, ok = QInputDialog.getInt(self,"number of repetitions","enter an integer number")
+#
+#                time.sleep(start_delay)
+#                for rep in range(repetition_number):
+#                    self.dlp.set_display_mode('static')
+#                    self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+#                    time.sleep(time_stim/1000)
+#
+#                    self.dlp.set_display_mode('internal')
+#                    self.dlp.black()
+#                    self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
+#                    time.sleep(time_wait/1000)
+
+#                time.sleep(start_delay)
+                worker = Worker(self.dlp_auto_control)
+                self.threadpool.start(worker)
 
 
         ## Internal test pattern mode
         elif self.display_mode_combobox.currentIndex() == 1: ## internal test pattern
             if index == 0: ## Checkboard small
                 self.dlp.checkboard_small()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 1: # Black
                 self.dlp.black()
+                self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
             if index == 2: ## White
                 self.dlp.white()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 3: ## Green
                 self.dlp.green()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 4: ## Blue
                 self.dlp.blue()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 5: ## Red
                 self.dlp.red()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 6: ## Vertical lines 1
                 self.dlp.horizontal_lines_1()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 7: ## Horizontal lines 1
                 self.dlp.vertical_lines_1()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 8: ## Vertical lines 2
                 self.dlp.horizontal_lines_2()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 9: ## Horizontal lines 2
                 self.dlp.vertical_lines_2()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 10: ## Diagonal lines
                 self.dlp.diagonal_lines()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 11: ## Grey Ramp Vertical
                 self.dlp.grey_ramp_vertical()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 12: ## Grey Ramp Horizontal
                 self.dlp.grey_ramp_horizontal()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
             if index == 13: ## Checkerboard Big
                 self.dlp.checkerboard_big()
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
 
         ## HDMI Video Input mode
         elif self.display_mode_combobox.currentIndex == 2:  ## HDMI video sequence
@@ -505,17 +771,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
-            if index == 1: # Choose Pattern Sequence To Load
+            if index == 0: # Choose Pattern Sequence To Load
+                debug_trace()
                 time_stim, ok = QInputDialog.getInt(self, 'Input Dialog', 'Duration of pattern exposition (in µs)')   ## time to be given in microseconds
-                image_folder = QFileDialog.getExistingDirectory(self, 'Select Image Folder where DLP images are stored')
+                image_folder = QFileDialog.getExistingDirectory(self, 'Select Image Folder where DLP images are stored')[0]
                 InputTriggerDelay = 0
                 AutoTriggerPeriod = 3333334
                 ExposureTime = 3333334
+
+            if index == 1: ## Choose Pattern Seauence to Display
+                print(image_folder)
                 self.dlp.display_image_sequence(image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
 
-            if index == 0: ## Generate Multiple Images with One ROI Per Image
+            if index == 2: ## Generate Multiple Images with One ROI Per Image
                 for nb in range(len(self.roi_list)):
-                    black_image = Image.new('1', (self.x_dim,self.y_dim), color=0) ## need to make this dependant upon fov size and not 2048
+                    black_image = Image.new('1', (2048,2048), color=0) ## need to make this dependant upon fov size and not 2048
                     black_image_with_ROI = black_image
                     x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
                     x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
@@ -523,9 +793,27 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                     black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                     black_image_with_ROI = np.asarray(black_image_with_ROI)
-                    black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608, 684))
+                    black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix,(608,684))
+                    black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
                     cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped)
 
+
+
+
+    def dlp_auto_control(self, dlp_on=50, dlp_off=500, dlp_sequence=1, dlp_repeat_sequence=1, dlp_interval=1):
+        time.sleep(1)
+        for i in range(dlp_repeat_sequence):
+            for j in range(dlp_sequence):
+                ## ON
+                self.dlp.set_display_mode('static')
+                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                time.sleep(dlp_on/1000)
+                ## OFF
+                self.dlp.set_display_mode('internal')
+                self.dlp.black()
+                self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
+                time.sleep(dlp_off/1000)
+            time.sleep(dlp_interval/1000)
 
 
     ####################
@@ -533,8 +821,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
     def laser_on(self):
         self.laser.turn_on()
+        self.timings_logfile_dict['laser']['on'].append(time.time_ns())
     def laser_off(self):
         self.laser.turn_off()
+        self.timings_logfile_dict['laser']['off'].append(time.time_ns())
 
 
     ########################
@@ -543,24 +833,150 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def left(self):
         self.scope.move_left()
+        self.coordinate_label_2.setText(self.scope.get_coordinates())
 
     def right(self):
         self.scope.move_right()
+        self.coordinate_label_2.setText(self.scope.get_coordinates())
 
     def backward(self):
         self.scope.move_backward()
+        self.coordinate_label_2.setText(self.scope.get_coordinates())
 
     def forward(self):
         self.scope.move_forward()
+        self.coordinate_label_2.setText(self.scope.get_coordinates())
 
     def up(self):
         self.scope.up()
+        self.coordinate_label_2.setText(self.scope.get_coordinates())
 
     def down(self):
         self.scope.down()
+        self.coordinate_label_2.setText(self.scope.get_coordinates())
 
     def stop_mouvment(self):
         self.scope.stop_mouvment()
+        self.coordinate_label_2.setText(self.scope.get_coordinates())
+
+
+
+    ####################
+    #### Automation  ###
+    ####################
+
+    def export_experiment(self):
+        self.info_logfile_dict['roi'].append(self.roi_list)
+        self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
+        self.info_logfile_dict['binning'].append(self.binning)
+        self.info_logfile_dict['fps'].append(self.internal_frame_rate)
+        self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
+        with open(self.info_logfile_path, "w") as file:
+            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+
+    def load_experiment(self):
+        ## experiment json file
+        self.path = QFileDialog.getExistingDirectory(None, 'Experiment folder:',
+                                                        'C:/', QFileDialog.ShowDirsOnly)[0]
+        experiment_path = QFileDialog.getOpenFileName(self, 'Select Experiment file',
+                                                        'C:/',"Experiment file (*.json)")[0]
+        # experiment_path = '/media/jeremy/Data/Data_Jeremy/2019_10_29/experiment_1/experiment_1_info.json'
+        ## load/write camera related stuff
+        with open(experiment_path) as file:
+            self.info_logfile_dict = dict(json.load(file))
+        self.roi_list = self.info_logfile_dict['roi'][0]
+        self.cam.write_exposure(self.info_logfile_dict['exposure time'][0])
+        self.cam.write_binning(self.info_logfile_dict['binning'][0])
+        self.cam.write_subarray_mode(2)
+        self.x_init = self.info_logfile_dict['fov'][0][0]
+        self.x_dim = self.info_logfile_dict['fov'][0][1]
+        self.y_init = self.info_logfile_dict['fov'][0][2]
+        self.y_dim = self.info_logfile_dict['fov'][0][3]
+        self.cam.write_subarray_size(self.x_init, self.x_dim, self.y_init, self.y_dim)
+
+    def runInParallel(self, *fns):
+        proc = []
+        for fn in fns:
+            p = Process(target=fn)
+            p.start()
+            proc.append(p)
+        for p in proc:
+            p.join()
+
+    def run_experiment(self):
+        for i in range(1):
+            self.initialize_experiment()
+            self.images = []
+            self.image_list = []
+            self.timings_logfile_dict['camera'] = []
+            image_processing_worker = Worker(self.processing_images)
+            dlp_worker = Worker(self.dlp_auto_control)
+            self.laser_on()
+            time.sleep(0.8)
+            self.threadpool.start(image_processing_worker)
+            self.threadpool.start(dlp_worker)
+            time.sleep(3)
+            self.laser_off()
+            time.sleep(5)
+#        self.runInParallel(self.processing_images2, self.dlp_auto_control2)
+
+    def processing_images2(self):
+        self.images = []
+        self.image_list = []
+        self.timings_logfile_dict['camera'] = []
+        self.cam.start_acquisition()
+        image_nb = self.internal_frame_rate*15
+        for i in range(image_nb):
+            self.images, self.times = self.cam.get_images() ## getting the images, sometimes its one other can be more
+            while self.images == []:
+                QTest.qWait(500)
+                self.images, self.times = self.cam.get_images()
+            for j in range(len(self.images)): ## for saving later
+                self.image_list.append(self.images[j])
+        self.timings_logfile_dict['camera'].append(self.times)
+        self.cam.end_acquisition()
+
+        self.save(self.image_list, self.path_raw_data)
+        with open(self.timings_logfile_path, "w") as file:
+         file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
+        self.info_logfile_dict['roi'].append(self.roi_list)
+        self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
+        self.info_logfile_dict['binning'].append(self.binning)
+        self.info_logfile_dict['fps'].append(self.internal_frame_rate)
+        self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
+        with open(self.info_logfile_path, "w") as file:
+         file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+
+
+
+    def dlp_auto_control2(self, dlp_on=50, dlp_off=500, dlp_sequence=1, dlp_repeat_sequence=1, dlp_interval=1):
+        for i in range(dlp_repeat_sequence):
+           for j in range(dlp_sequence):
+                ## OFF
+                self.dlp.set_display_mode('internal')
+                self.dlp.black()
+                time.sleep(dlp_off/1000)
+                ## ON
+                self.dlp.set_display_mode('static')
+                time.sleep(dlp_on/1000)
+           time.sleep(dlp_interval/1000)
+           print('dlp stim')
+
+    ########################################
+    #### Classical electrophysiology  ######
+    ########################################
+    def stim_on(self):
+        self.bridge.stim_on()
+        self.timings_logfile_dict['ephys']['on'] = []
+
+    def stim_off(self):
+        self.bridge.stim_off()
+        self.timings_logfile_dict['ephys']['off'] = []
+
+    def stim(self):
+        self.stim_on()
+        time.sleep(0.5)
+        self.stim_off()
 
     ####################
     #### Clean exit ####

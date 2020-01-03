@@ -207,6 +207,18 @@ class DCAMPROP_VALUETEXT(ctypes.Structure):
                 ("textbytes", ctypes.c_int32)]
 
 
+## DCAMREC
+
+class DCAM_TIMESTAMPBLOCK(ctypes.Structure):
+    _fields_ = [("hdr", ctypes.c_int32),
+                ("timestamps", ctypes.c_int32),
+                ("timestampsize", ctypes.c_int32),
+                ("timestampvalidsize", ctypes.c_int32),
+                ("timestampkind", ctypes.c_int32),
+                ("reserved", ctypes.c_int32)]
+
+
+
 def convertPropertyName(p_name):
     """
     "Regularizes" a property name. We are using all lowercase names with the spaces replaced by underscores.
@@ -402,6 +414,9 @@ class HamamatsuCamera(object):
         This will block waiting for new frames even if there new frames available when it is called.
         """
         frames = []
+        times = []
+        timestamp = 0
+
         for n in self.newFrames():
 
             paramlock = DCAMBUF_FRAME(0, 0, 0, n, None, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -417,9 +432,14 @@ class HamamatsuCamera(object):
             hc_data.copyData(paramlock.buf)
 
             frames.append(hc_data)
+            timestamp = paramlock.timestamp
+            framestamp = paramlock.framestamp
+            time = float(str(timestamp)+'.'+str(framestamp))
+            # print(time)
+            times.append(time)
 
+        return [frames, [self.frame_x, self.frame_y], times]
 
-        return [frames, [self.frame_x, self.frame_y]]
 
     def getModelInfo(self, camera_id):
         """
@@ -945,7 +965,7 @@ if (__name__ == "__main__"):
     n_cameras = initCam()
     print("found:", n_cameras, "cameras")
     if (n_cameras > 0):
-        hcam = HamamatsuCameraMR(camera_id = 0)
+        hcam = HamamatsuCamera(camera_id = 0)
         # print(hcam.setPropertyValue("defect_correct_mode", 1))
         print("camera 0 model:", hcam.getModelInfo(0))
 
@@ -1002,13 +1022,14 @@ if (__name__ == "__main__"):
 #             for param in params:
 #                 print(param, hcam.getPropertyValue(param)[0])
 #
-#         # Test 'run_till_abort' acquisition.
-#         if False:
+         # Test 'run_till_abort' acquisition.
+#         if True:
 #             print("Testing run till abort acquisition")
 #             hcam.startAcquisition()
 #             cnt = 0
-#             for i in range(300):
-#                 [frames, dims] = hcam.getFrames()
+#             for i in range(20):
+#                 [frames, dims, timing] = hcam.getFrames()
+#                 print(frames, dims, timing)
 #                 for aframe in frames:
 #                     print(cnt, aframe[0:5])
 #                     cnt += 1

@@ -4,6 +4,9 @@ Created on Mon Jun 17 21:46:50 2019
 @author: Jeremy
 """
 from dlp.dm365 import dm365
+import os
+import time
+import pdb
 
 
 class Dlp():
@@ -60,15 +63,32 @@ class Dlp():
 
 	## pattern of images
 	def display_image_sequence(self, image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime):
-		self.dlp.setModeToPatternSequenceDisplay()
-		images_path = os.listdir(image_folder)
-		numOfPatters = len(images_path)
-		self.dlp.setPatternSeqSetting(bitDepth = 8, numOfPatters = numOfPatters, Mode = 0, InputTriggerType = 1,
-										InputTriggerDelay = InputTriggerDelay, AutoTriggerPeriod = AutoTriggerPeriod,
-										ExposureTime = ExposureTime, LEDSelect =1)
-		for image in images:
-			image_path = os.path.join(image_path, 'f"{image}".bmp')
-			self.dlp.PatternDefinition(image, image_path)
+		pdb.set_trace()
+		
+		images = os.listdir(image_folder)
+#		numOfPatters = len(images)
+#		self.dlp.setPatternSeqSetting()
+#		self.dlp.setPatternSeqSetting(bitDepth = 8, numOfPatters = numOfPatters, Mode = 0, InputTriggerType = 1,
+#										InputTriggerDelay = InputTriggerDelay, AutoTriggerPeriod = AutoTriggerPeriod,
+#										ExposureTime = ExposureTime, LEDSelect =1)
+#		self.dlp.setModeToPatternSequenceDisplay()
+
+		self.dlp.PatternDefinition(0, image_folder + images[0])
+		time.sleep(5)
+		self.dlp.PatternDefinition(1, image_folder + images[1])
+		time.sleep(5)
+		self.dlp.PatternDefinition(2, image_folder + images[2])
+		time.sleep(5)
+		self.dlp.PatternDefinition(3, image_folder + images[3])
+		time.sleep(5)
+		self.dlp.PatternDefinition(4, image_folder + images[4])
+
+#		i=0
+#		for image in images:
+#			print(image)
+#			print(i)
+#			self.dlp.PatternDefinition(i, image_folder + image)
+#			i+=1
 		self.dlp.startPatternSequence()
 		time.sleep(30)
 		self.dlp.stoptPatternSequence()
@@ -84,4 +104,19 @@ if __name__ == "__main__":
 	dlp.connect()
 	dlp.blue()
 	dlp.black()
-	dlp.disconnect()
+#	dlp.disconnect()
+
+#	dlp.set_display_mode('static')
+#	dlp.display_static_image('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/ROI_warped_0.bmp')
+	
+	
+#
+	InputTriggerDelay = 0
+	AutoTriggerPeriod = 3333334
+	ExposureTime = 3333334
+
+	dlp.display_image_sequence('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/', InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
+
+
+
+

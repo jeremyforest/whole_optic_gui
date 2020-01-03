@@ -17,7 +17,7 @@ from camera.hamamatsu_camera import *
 class MainCamera():
     def __init__(self):
         self.init = initCam()
-        self.hcam = HamamatsuCameraMR(camera_id = 0)
+        self.hcam = HamamatsuCamera(camera_id = 0)
         self.properties = self.hcam.getProperties()
 
     def start_acquisition(self):
@@ -67,12 +67,13 @@ class MainCamera():
         return hpos, hsize, vpos, vsize
 
     def get_images(self):
-        [frames, dims] = self.hcam.getFrames()
+        [frames, dims, times] = self.hcam.getFrames()
+        # print(times)
         images = []
         for i in range(len(frames)):
             image = frames[i].getData()
             images.append(image)
-        return images
+        return images, times
 
     def get_internal_frame_rate(self):
         frame_rate = self.hcam.getPropertyValue("internal_frame_rate")[0]

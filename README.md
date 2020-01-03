@@ -3,7 +3,16 @@
 
 GUI to control the microscopy setup in the lab.
 
-Changelog
+Changelog (brief):
+
+Version 0.3 logging implementation and threading
+  Implemented dlp, laser, camera image timing data logging for synchronization
+  Started implementing threading of DLP, camera and laser control
+  Various bug fixes and moving code around
+  Modified the slider for the exposure time (divided by 10 and increae to 1000 for more control)
+  Implemented absolute coordonate label for the microscope control
+  Started working on some automation for experiment designs
+
 
 Version 0.2.2 more bug fixes
   Fixed several bug fixes for normal function of the program
@@ -20,7 +29,6 @@ Version 0.2.1 bug fixes
     Subarray size function: writing new subarray two times to camera as one time sometimes does not update correctly
   Implemented on/off frequency control for the dlp
   Implemented stop stream button
-
 
 Version 0.2 DLP major implementations
     Interface redesign. Major rewrite / implementation of DLP functions and its interface with the camera.

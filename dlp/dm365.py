@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import binascii
 import math
+import time
 
 #####################################
 #####################################
@@ -55,6 +56,9 @@ class dm365():
 
 	    resp = self.s.sendall(packet)
 	    ans = self.s.recv(1024)
+
+	    print(ans)
+
 	    if (ans[0] == 0):
 	        print('The device returned LightCrafter System Busy Packet: Try again')
 
@@ -69,7 +73,7 @@ class dm365():
 	def checkError(errorByte):
 		#"""Function for checkin errors"""
 	    return {
-	        1: 'Command execution failed with unknown error1',
+	        1: 'Command execution failed with unknown error',
 	        2: 'Invalid command',
 	        3: 'Invalid Parameter',
 	        4: 'Out of memory resource',
@@ -146,6 +150,7 @@ class dm365():
 	    imData = self.readBMPImage(fileName)#  'Square_wx80_wy250.bmp'
 	    ans = self.makeAndSendPacket(header, imData)
 	    return  ans
+
 	##########################
 	#   INTERNAL TEST PATTERN FUNC
 	##########################
@@ -243,7 +248,7 @@ class dm365():
 
 
 	    for i in np.arange(blockSize):
-
+	           
 	        if(i==0):
 	            payload = imData[0:MAX_PACKET_LENGTH]
 
@@ -275,12 +280,15 @@ class dm365():
 	        header[4] = lenpayloadLSB
 	        header[5] =  lenpayloadMSB
 
+	        print(header)
+
 	        currentPacket = bytearray(header)
 	        currentPacket.extend(payload)
 	        currentPacket = self.appendCheckSum(currentPacket)
 	        self.printData(currentPacket)
 
 	        ans = self.sendData(currentPacket)
+
 	    return ans
 	##########################
 	##########################
@@ -395,7 +403,10 @@ class dm365():
 	    header =  bytearray(b'\x02\x04\x01\x00\x00\x00')#The last 3 bbytes(flag, LSB and MSB) is being changed in the makeAndSendPAcket func
 	    imData.extend(self.readBMPImage(fileName) )#  'Square_wx80_wy250.bmp'
 	    ans = self.makeAndSendPacket(header, imData)
-	    return  ans
+	    return ans
+
+
+
 	##########################
 	##########################
 	def startPatternSequence(self):#Starting Patter Sequence
