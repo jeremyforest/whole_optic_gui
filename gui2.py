@@ -1,5 +1,5 @@
 ## PyQT5
-from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, QThreadPool
+from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, pyqtSignal, QThreadPool, QObject
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene, QInputDialog
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
@@ -20,6 +20,8 @@ import matplotlib.pyplot as plt
 import json
 from datetime import datetime, timezone
 from multiprocessing import Process
+import traceback
+import math
 
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
@@ -29,12 +31,26 @@ def debug_trace():
   set_trace()
 
 
+class Signals(QObject):
+    '''
+    Adapted from https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
+    Defines the signals available.
+    Supported signals are:
+    finished
+        No data
+    error
+        `tuple` (exctype, value, traceback.format_exc() )
+    result
+        `object` data returned from processing, anything
+    '''
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+
 class Worker(QRunnable):
     '''
-    Worker thread from https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
-
+    From https://www.learnpyqt.com/courses/concurrent-execution/multithreading-pyqt-applications-qthreadpool/
     Inherits from QRunnable to handler worker thread setup, signals and wrap-up.
-
     :param callback: The function callback to run on this worker thread. Supplied args and
                      kwargs will be passed through to the runner.
     :type callback: function
@@ -49,29 +65,27 @@ class Worker(QRunnable):
         self.fn = fn
         self.args = args
         self.kwargs = kwargs
-        # self.signals = WorkerSignals()
+        self.signals = Signals()
+
+        # Add the callback to our kwargs
+        self.kwargs['progress_callback'] = self.signals.progress
 
     @pyqtSlot()
     def run(self):
         '''
         Initialise the runner function with passed args, kwargs.
         '''
-
         # Retrieve args/kwargs here; and fire processing using them
         try:
-            result = self.fn(
-                *self.args, **self.kwargs)
-#                status=self.signals.status,
-#                progress=self.signals.progress)
+            result = self.fn(*self.args, **self.kwargs)
         except:
-            pass
-#            traceback.print_exc()
-        #     exctype, value = sys.exc_info()[:2]
-        #     self.signals.error.emit((exctype, value, traceback.format_exc()))
-        # else:
-        #     self.signals.result.emit(result)  # Return the result of the processing
-        # finally:
-        #     self.signals.finished.emit()  # Done
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            self.signals.result.emit(result)  # Return the result of the processing
+        finally:
+            self.signals.finished.emit()  # Done
 
 
 
@@ -88,6 +102,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+        camera_signal_end = Signals()
+        dlp_signal_end = Signals()
+        laser_signal_end = Signals()
 
         ## commande-line options
         self.activate_camera = False
@@ -133,6 +150,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.activate_camera is True:
             from camera.camera_control import MainCamera
             self.cam = MainCamera()
+            ## initialize camera parameters
+            ## fov
+            self.x_dim = self.cam.get_subarray_size()[1]
+            self.x_init = self.cam.get_subarray_size()[0]
+            self.y_dim = self.cam.get_subarray_size()[3]
+            self.y_init = self.cam.get_subarray_size()[2]
+            self.subarray_label.setText(str(self.cam.get_subarray_size()))
+            ## binning
+            self.binning = self.cam.read_binning()
+            self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
+            ## exposure time
+            self.exposure_time_value.display(self.cam.read_exposure())
+            ## set property as wanted
             self.cam.hcam.setPropertyValue('defect_correct_mode', 1)  ## necessary ?
             print(self.cam.hcam.getPropertyValue('defect_correct_mode'))
             self.cam.hcam.setPropertyValue('hot_pixel_correct_level', 2)   ## necessary ?
@@ -169,7 +199,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.calibration_dlp_camera_matrix_path = 'dlp/calibration_matrix.json'
 
         ## folder widget (top left)
-        self.initialize_hardware_button.clicked.connect(self.initialize_hardware) ## will be removed and integrated with loading of each hardware piece
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
         self.change_folder_button.clicked.connect(self.change_folder)
 
@@ -185,7 +214,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.timings_logfile_dict['ephys'] = {}
         self.timings_logfile_dict['ephys']['on'] = []
         self.timings_logfile_dict['ephys']['off'] = []
-
 
         self.info_logfile_dict = {}
         self.info_logfile_dict['experiment creation date'] = None
@@ -243,21 +271,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     ###################################
+    ####### utils functions ###########
+    ###################################
+    def progress_fn(self, n):
+        print("%d%% done" % n)
+
+    def print_output(self, s):
+        print(s)
+
+    def thread_complete(self):
+        print("Thread Completed!")
+
+    ###################################
     ########## GUI code ###############
     ###################################
-    def initialize_hardware(self):
-        ## initialize camera parameters
-        ## fov
-        self.x_dim = self.cam.get_subarray_size()[1]
-        self.x_init = self.cam.get_subarray_size()[0]
-        self.y_dim = self.cam.get_subarray_size()[3]
-        self.y_init = self.cam.get_subarray_size()[2]
-        self.subarray_label.setText(str(self.cam.get_subarray_size()))
-        ## binning
-        self.binning = self.cam.read_binning()
-        self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
-        ## exposure time
-        self.exposure_time_value.display(self.cam.read_exposure())
 
     def change_folder(self):
         self.path = QFileDialog.getExistingDirectory(None, 'Select the folder you want the path to change to:',
@@ -334,102 +361,64 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
             self.save_as_png(self.image_reshaped, image_name)
 
-    def processing_images(self):
-         self.cam.start_acquisition()
-         for i in range(1500):
-             print(i)
-             if self.stop_stream_button.clicked.connect(self.stop_stream):
-                 pass
-             else:
-                 self.images, self.times = self.cam.get_images() ## getting the images, sometimes its one other can be more
-                 while self.images == []:
-                     QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
-                     self.images, self.times = self.cam.get_images()
-                 self.image = self.images[0]  ## keeping only the 1st for projection
-                 self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                         int(self.y_dim/self.binning)) ## image needs reshaping for show
-                 if self.saving_check.isChecked():
-                    for j in range(len(self.images)): ## for saving later
-                        self.image_list.append(self.images[j])
-                    self.timings_logfile_dict['camera'].append(self.times)
-    #                print(self.timings_logfile_dict)
-                 self.graphicsView.setImage(self.image_reshaped)
-
-         self.cam.end_acquisition()
-
-         if self.saving_check.isChecked():
-             ## saving images
-             save_images_worker = Worker(self.save, self.image_list, self.path_raw_data)
-             self.threadpool.start(save_images_worker)
-             ## saving images times
-             with open(self.timings_logfile_path, "w") as file:
-                 file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
-             self.info_logfile_dict['roi'].append(self.roi_list)
-             self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
-             self.info_logfile_dict['binning'].append(self.binning)
-             self.info_logfile_dict['fps'].append(self.internal_frame_rate)
-             self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
-             with open(self.info_logfile_path, "w") as file:
-                 file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
-
     def stream(self):
          self.images = []
          self.image_list = []
          self.timings_logfile_dict['camera'] = []
          image_processing_worker = Worker(self.processing_images)
+         image_processing_worker.signals.result.connect(self.print_output)
+         image_processing_worker.signals.finished.connect(self.thread_complete)
+         image_processing_worker.signals.progress.connect(self.progress_fn)
          self.threadpool.start(image_processing_worker)
 
-#    def stream(self):
-#        if self.simulated:
-#            for i in range(1):
-#                self.image = np.random.rand(2048, 2048)
-#                self.image_reshaped = self.image
-#                self.graphicsView.setImage(self.image)
-#                pg.QtGui.QApplication.processEvents()
-#        else:
-#            self.images = []
-#            self.timings_logfile_dict['camera'] = []
-#            self.image_list = []
-#
-#            self.cam.start_acquisition()
-#            for i in range(100):
-#                self.stop_stream_button.clicked.connect(self.stop_stream)
-#                self.images, self.times = self.cam.get_images() ## getting the images, sometimes its one other can be more
-#                while self.images == []:
-#                    QTest.qWait(500)  ## kind of a hack, need to make a better solution. Also breaks if images empty after that time
-#                    self.images, self.times = self.cam.get_images()
-#                print(self.images)
-#                print(self.times)
-#                self.image = self.images[0]  ## keeping only the 1st for projection
-#                print(self.image)
-#                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-#                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
-#                if self.saving_check.isChecked():
-#                    for j in range(len(self.images)): ## for saving later
-#                        self.image_list.append(self.images[j])
-#                    self.timings_logfile_dict['camera'].append(self.times)
-#
-#                self.graphicsView.setImage(self.image_reshaped)
-#                pg.QtGui.QApplication.processEvents()
-#            self.cam.end_acquisition()
-#
-#        if self.saving_check.isChecked():
-#            ## saving images
-#            self.save(self.image_list, self.path_raw_data)
-#            ## saving images times
-#            with open(self.timings_logfile_path, "w") as file:
-#                file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
-#
-#            self.info_logfile_dict['roi'].append(self.roi_list)
-#            self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
-#            self.info_logfile_dict['binning'].append(self.binning)
-#            self.info_logfile_dict['fps'].append(self.internal_frame_rate)
-#            self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
-#            with open(self.info_logfile_path, "w") as file:
-#                file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
-
     def stop_stream(self):
+        # self.image_processing_worker.terminate
+        acquire_images = False
+
+    def processing_images(self):    #,progress_callback):
+        acquire_images = True
+        self.cam.start_acquisition()
+        image_acquired = 0
+        while acquire_images:
+            self.stop_stream_button.clicked.connect(self.stop_stream)
+            if acquire_images == False:
+                break
+            else:
+                self.images, self.times = self.cam.get_images()  ## getting the images, getting 0, 1 or >1 images
+                self.image = self.images[0]  ## keeping only the 1st image for GUI display
+                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
+                                                        int(self.y_dim/self.binning))  ## image needs reshaping for show
+                self.graphicsView.setImage(self.image_reshaped)
+                # progress_callback.emit(n*100/4)
+                print(f"Acquired {image_acquired} images")
+                image_acquired += 1
+                if self.saving_check.isChecked(): ## for saving data after end off acquisition
+                    for j in range(len(images)):
+                        self.image_list.append(images[j])
+                    self.timings_logfile_dict['camera'].append(times)
         self.cam.end_acquisition()
+        self.saving_images(self.images, self.times)
+
+    def saving_images(self, images, times):
+        if self.saving_check.isChecked():
+            ## saving images
+            save_images_worker = Worker(self.save, self.image_list, self.path_raw_data)
+            save_images_worker.signals.result.connect(self.print_output)
+            save_images_worker.signals.finished.connect(self.thread_complete)
+            save_images_worker.signals.progress.connect(self.progress_fn)
+            self.threadpool.start(save_images_worker)
+            ## saving images times
+            with open(self.timings_logfile_path, "w") as file:
+                file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
+            ## saving experiment info
+            self.info_logfile_dict['roi'].append(self.roi_list)
+            self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
+            self.info_logfile_dict['binning'].append(self.binning)
+            self.info_logfile_dict['fps'].append(self.internal_frame_rate)
+            self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
+            with open(self.info_logfile_path, "w") as file:
+                file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+
 
     def roi(self):
         axes = (0, 1)
@@ -476,9 +465,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             images_nb = len(os.listdir(self.path))
             images = []
             for i in range(images_nb):
-                image = np.load(str(self.path) + '/image{}.npy'.format(str(i)))
-                image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                        int(self.y_dim/self.binning)) ## image needs reshaping for show
+                image = np.load(str(self.path) + '/raw_data/image{}.npy'.format(str(i)))
+                image_reshaped = image.reshape(int(math.sqrt(image.shape[0])), int(math.sqrt(image.shape[0])))
                 images.append(image_reshaped)
             for img in images:
                 self.graphicsView.setImage(img)
@@ -699,24 +687,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
 
             elif index == 3: ## display static image on on/off timer set by the user
-#                start_delay, ok = QInputDialog.getInt(self,"delay before starting the stimulation","enter a number in s")
-#                time_stim, ok = QInputDialog.getInt(self,"duration of stimulus","enter a number in ms")
-#                time_wait, ok = QInputDialog.getInt(self,"duration between stimulus","enter a number in ms")
-#                repetition_number, ok = QInputDialog.getInt(self,"number of repetitions","enter an integer number")
-#
-#                time.sleep(start_delay)
-#                for rep in range(repetition_number):
-#                    self.dlp.set_display_mode('static')
-#                    self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
-#                    time.sleep(time_stim/1000)
-#
-#                    self.dlp.set_display_mode('internal')
-#                    self.dlp.black()
-#                    self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
-#                    time.sleep(time_wait/1000)
-
-#                time.sleep(start_delay)
                 worker = Worker(self.dlp_auto_control)
+                dlp_auto_control.signals.result.connect(self.print_output)
+                dlp_auto_control.signals.finished.connect(self.thread_complete)
+                dlp_auto_control.signals.progress.connect(self.progress_fn)
                 self.threadpool.start(worker)
 
 
@@ -797,11 +771,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
                     cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped)
 
-
-
-
     def dlp_auto_control(self, dlp_on=50, dlp_off=500, dlp_sequence=1, dlp_repeat_sequence=1, dlp_interval=1):
-        time.sleep(1)
         for i in range(dlp_repeat_sequence):
             for j in range(dlp_sequence):
                 ## ON
@@ -814,23 +784,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
                 time.sleep(dlp_off/1000)
             time.sleep(dlp_interval/1000)
-
+        dlp_signal_end.finished()
 
     ####################
-    #### Laser part ####
+    ####    Laser   ####
     ####################
     def laser_on(self):
         self.laser.turn_on()
         self.timings_logfile_dict['laser']['on'].append(time.time_ns())
+
     def laser_off(self):
         self.laser.turn_off()
         self.timings_logfile_dict['laser']['off'].append(time.time_ns())
 
 
     ########################
-    #### Controler part ####
+    ####   Controler    ####
     ########################
-
     def left(self):
         self.scope.move_left()
         self.coordinate_label_2.setText(self.scope.get_coordinates())
@@ -858,7 +828,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def stop_mouvment(self):
         self.scope.stop_mouvment()
         self.coordinate_label_2.setText(self.scope.get_coordinates())
-
 
 
     ####################
@@ -894,73 +863,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.y_dim = self.info_logfile_dict['fov'][0][3]
         self.cam.write_subarray_size(self.x_init, self.x_dim, self.y_init, self.y_dim)
 
-    def runInParallel(self, *fns):
-        proc = []
-        for fn in fns:
-            p = Process(target=fn)
-            p.start()
-            proc.append(p)
-        for p in proc:
-            p.join()
-
     def run_experiment(self):
-        for i in range(1):
-            self.initialize_experiment()
-            self.images = []
-            self.image_list = []
-            self.timings_logfile_dict['camera'] = []
-            image_processing_worker = Worker(self.processing_images)
-            dlp_worker = Worker(self.dlp_auto_control)
-            self.laser_on()
-            time.sleep(0.8)
-            self.threadpool.start(image_processing_worker)
-            self.threadpool.start(dlp_worker)
-            time.sleep(3)
-            self.laser_off()
-            time.sleep(5)
-#        self.runInParallel(self.processing_images2, self.dlp_auto_control2)
-
-    def processing_images2(self):
-        self.images = []
-        self.image_list = []
-        self.timings_logfile_dict['camera'] = []
-        self.cam.start_acquisition()
-        image_nb = self.internal_frame_rate*15
-        for i in range(image_nb):
-            self.images, self.times = self.cam.get_images() ## getting the images, sometimes its one other can be more
-            while self.images == []:
-                QTest.qWait(500)
-                self.images, self.times = self.cam.get_images()
-            for j in range(len(self.images)): ## for saving later
-                self.image_list.append(self.images[j])
-        self.timings_logfile_dict['camera'].append(self.times)
-        self.cam.end_acquisition()
-
-        self.save(self.image_list, self.path_raw_data)
-        with open(self.timings_logfile_path, "w") as file:
-         file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
-        self.info_logfile_dict['roi'].append(self.roi_list)
-        self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
-        self.info_logfile_dict['binning'].append(self.binning)
-        self.info_logfile_dict['fps'].append(self.internal_frame_rate)
-        self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
-        with open(self.info_logfile_path, "w") as file:
-         file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+        self.initialize_experiment()
+        dlp_worker = Worker(self.dlp_auto_control)
+        self.threadpool.start(dlp_worker)
+        self.laser_on()
+        self.stream()
+        dlp_signal_end.finished.connect(laser_off)
+        laser_signal_end.finished.connect(stop_stream)
 
 
-
-    def dlp_auto_control2(self, dlp_on=50, dlp_off=500, dlp_sequence=1, dlp_repeat_sequence=1, dlp_interval=1):
-        for i in range(dlp_repeat_sequence):
-           for j in range(dlp_sequence):
-                ## OFF
-                self.dlp.set_display_mode('internal')
-                self.dlp.black()
-                time.sleep(dlp_off/1000)
-                ## ON
-                self.dlp.set_display_mode('static')
-                time.sleep(dlp_on/1000)
-           time.sleep(dlp_interval/1000)
-           print('dlp stim')
 
     ########################################
     #### Classical electrophysiology  ######
