@@ -1,5 +1,5 @@
 ## PyQT5
-from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, pyqtSignal, QThreadPool, QObject
+from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, pyqtSignal, QThreadPool, QObject, QTimer
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene, QInputDialog
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
@@ -11,6 +11,7 @@ from whole_optic_gui import Ui_MainWindow
 ## common dependencies
 import argparse
 import numpy as np
+import math
 import time
 import os
 import sys
@@ -21,7 +22,6 @@ import json
 from datetime import datetime, timezone
 from multiprocessing import Process
 import traceback
-import math
 
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
@@ -68,7 +68,7 @@ class Worker(QRunnable):
         self.signals = Signals()
 
         # Add the callback to our kwargs
-        self.kwargs['progress_callback'] = self.signals.progress
+        #self.kwargs['progress_callback'] = self.signals.progress
 
     @pyqtSlot()
     def run(self):
@@ -102,9 +102,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.threadpool = QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-        camera_signal_end = Signals()
-        dlp_signal_end = Signals()
-        laser_signal_end = Signals()
 
         ## commande-line options
         self.activate_camera = False
@@ -158,7 +155,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.y_init = self.cam.get_subarray_size()[2]
             self.subarray_label.setText(str(self.cam.get_subarray_size()))
             ## binning
-            self.binning = self.cam.read_binning()
+            self.bin_size = self.cam.read_binning()
             self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
             ## exposure time
             self.exposure_time_value.display(self.cam.read_exposure())
@@ -231,6 +228,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.binning_combo_box.activated.connect(self.binning)
         self.subArray_mode_radioButton.toggled.connect(self.subarray)
         self.update_internal_frame_rate_button.clicked.connect(self.update_internal_frame_rate)
+        self.stop_stream_button.clicked.connect(self.stop_stream)
+        self.timer = QTimer()
 
         ## roi
         self.save_ROI_button.clicked.connect(self.roi)
@@ -269,6 +268,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## electrophysiology
         self.stim_button.clicked.connect(self.stim)
 
+        ## custome signals
+        camera_signal = Signals()
+        dlp_signal = Signals()
+        laser_signal = Signals()
+        dlp_signal.finished.connect(laser_off)
+        laser_signal.finished.connect(stop_stream)
 
     ###################################
     ####### utils functions ###########
@@ -355,8 +360,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.images, self.times = self.cam.get_images()
             self.cam.end_acquisition()
             self.image = self.images[0]
-            self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                    int(self.y_dim/self.binning)) ## image needs reshaping
+            self.image_reshaped = self.image.reshape(int(self.x_dim/self.bin_size),
+                                                    int(self.y_dim/self.bin_size)) ## image needs reshaping
             self.graphicsView.setImage(self.image_reshaped)
             image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
             self.save_as_png(self.image_reshaped, image_name)
@@ -368,7 +373,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
          image_processing_worker = Worker(self.processing_images)
          image_processing_worker.signals.result.connect(self.print_output)
          image_processing_worker.signals.finished.connect(self.thread_complete)
-         image_processing_worker.signals.progress.connect(self.progress_fn)
+         #image_processing_worker.signals.progress.connect(self.progress_fn)
          self.threadpool.start(image_processing_worker)
 
     def stop_stream(self):
@@ -380,14 +385,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cam.start_acquisition()
         image_acquired = 0
         while acquire_images:
-            self.stop_stream_button.clicked.connect(self.stop_stream)
             if acquire_images == False:
+                break
+            if image_acquired == 800:
                 break
             else:
                 self.images, self.times = self.cam.get_images()  ## getting the images, getting 0, 1 or >1 images
                 self.image = self.images[0]  ## keeping only the 1st image for GUI display
-                self.image_reshaped = self.image.reshape(int(self.x_dim/self.binning),
-                                                        int(self.y_dim/self.binning))  ## image needs reshaping for show
+                self.image_reshaped = self.image.reshape(int(self.x_dim/self.bin_size),
+                                                        int(self.y_dim/self.bin_size))  ## image needs reshaping for show
                 self.graphicsView.setImage(self.image_reshaped)
                 # progress_callback.emit(n*100/4)
                 print(f"Acquired {image_acquired} images")
@@ -405,7 +411,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             save_images_worker = Worker(self.save, self.image_list, self.path_raw_data)
             save_images_worker.signals.result.connect(self.print_output)
             save_images_worker.signals.finished.connect(self.thread_complete)
-            save_images_worker.signals.progress.connect(self.progress_fn)
+            #save_images_worker.signals.progress.connect(self.progress_fn)
             self.threadpool.start(save_images_worker)
             ## saving images times
             with open(self.timings_logfile_path, "w") as file:
@@ -413,7 +419,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             ## saving experiment info
             self.info_logfile_dict['roi'].append(self.roi_list)
             self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
-            self.info_logfile_dict['binning'].append(self.binning)
+            self.info_logfile_dict['binning'].append(self.bin_size)
             self.info_logfile_dict['fps'].append(self.internal_frame_rate)
             self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
             with open(self.info_logfile_path, "w") as file:
@@ -486,7 +492,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if index == 2:
             self.cam.write_binning(4)
         self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
-        self.binning = self.cam.read_binning()
+        self.bin_size = self.cam.read_binning()
 
     def subarray(self):
         if self.subArray_mode_radioButton.isChecked():
@@ -619,27 +625,28 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if index == 0: # static image
             self.dlp.set_display_mode('static')
             self.display_mode_subbox_combobox.addItems(['Load Static Image',
-                                                        'Generate Static Image from ROI',
+                                                        'Generate Static Image From ROI',
                                                         'Display Static Image',
-                                                        'Display Stati Image on Timer'])
+                                                        'Display Static Image On Timer'])
         if index == 1: # internal test pattern
             self.dlp.set_display_mode('internal')
-            self.display_mode_subbox_combobox.addItems(['Checkboard small',
+            self.display_mode_subbox_combobox.addItems(['Checkboard Small',
                                                         'Black',
                                                         'White',
                                                         'Green',
                                                         'Blue',
                                                         'Red',
-                                                        'Vertical lines 1',
-                                                        'Horizontal lines 1',
-                                                        'Vertical lines 2',
-                                                        'Horizontal lines 2',
-                                                        'Diagonal lines',
+                                                        'Vertical Lines 1',
+                                                        'Horizontal Lines 1',
+                                                        'Vertical Lines 2',
+                                                        'Horizontal Lines 2',
+                                                        'Diagonal Lines',
                                                         'Grey Ranp Vertical',
                                                         'Grey Ramp Horizontal',
-                                                        'Checkerboard big'])
+                                                        'Checkerboard Big'])
         if index == 2: # hdmi video input
-            self.display_mode_subbox_combobox.addItem('Choose HDMI Video Sequence')
+            self.display_mode_subbox_combobox.addItems(['Generate ROI Files and Compile Movie From Images',
+                                                        'Choose HDMI Video Sequence'])
         if index == 3: # pattern sequence display
             self.dlp.set_display_mode('pattern')
             self.display_mode_subbox_combobox.addItems(['Choose Pattern Sequence To Load',
@@ -690,7 +697,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 worker = Worker(self.dlp_auto_control)
                 dlp_auto_control.signals.result.connect(self.print_output)
                 dlp_auto_control.signals.finished.connect(self.thread_complete)
-                dlp_auto_control.signals.progress.connect(self.progress_fn)
+                #dlp_auto_control.signals.progress.connect(self.progress_fn)
                 self.threadpool.start(worker)
 
 
@@ -741,7 +748,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         ## HDMI Video Input mode
         elif self.display_mode_combobox.currentIndex == 2:  ## HDMI video sequence
-            print("mode not yet implemented")
+            if index == 0: ## Generate ROI Files and Compile Movie From Images
+                self.generate_one_image_per_roi()
+                self.movie_from_images()
+            if index == 1: ## Choose HDMI Video Sequence
+                vlc_path = "C:\Program Files (x86)\VideoLAN\VLC\vlc.exe"
+                video_path = f"{self.path}/dlp_images/dlp_movie.avi"
+                options = "--qt-fullscreen-screennumber=1 -f"
+                subprocess.call([vlc_path, options, video_path])
 
         ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
@@ -758,18 +772,35 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.dlp.display_image_sequence(image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
 
             if index == 2: ## Generate Multiple Images with One ROI Per Image
-                for nb in range(len(self.roi_list)):
-                    black_image = Image.new('1', (2048,2048), color=0) ## need to make this dependant upon fov size and not 2048
-                    black_image_with_ROI = black_image
-                    x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
-                    x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
-                    draw = ImageDraw.Draw(black_image_with_ROI)
-                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
-                    black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
-                    black_image_with_ROI = np.asarray(black_image_with_ROI)
-                    black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix,(608,684))
-                    black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
-                    cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped)
+                self.generate_one_image_per_roi()
+
+    def generate_one_image_per_roi(self, roi_list):
+        for nb in range(len(self.roi_list)):
+            black_image = Image.new('1', (2048,2048), color=0)
+            black_image_with_ROI = black_image
+            x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
+            x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
+            draw = ImageDraw.Draw(black_image_with_ROI)
+            draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
+            black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
+            black_image_with_ROI = np.asarray(black_image_with_ROI)
+            black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix,(608,684))
+            black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
+            cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped)
+
+    def movie_from_images(self):
+        filenames = os.listdir(f"{self.path}/dlp_images/")
+        img_array = []
+        for filename in filenames:
+            img = cv2.imread(f"{self.path}/dlp_images/{filename}")
+            h, v, z = img.shape
+            size = (h,v)
+            img_array.append(img)
+        fps = 100  ## 1 frame last 10 ms
+        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'I420'), fps, size)
+        for i in range(len(img_array)):
+            out.write(img_array[i])
+        out.release()
 
     def dlp_auto_control(self, dlp_on=50, dlp_off=500, dlp_sequence=1, dlp_repeat_sequence=1, dlp_interval=1):
         for i in range(dlp_repeat_sequence):
@@ -784,7 +815,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
                 time.sleep(dlp_off/1000)
             time.sleep(dlp_interval/1000)
-        dlp_signal_end.finished()
+        dlp_signal.finished.emit()
 
     ####################
     ####    Laser   ####
@@ -795,6 +826,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def laser_off(self):
         self.laser.turn_off()
+        laser_signal.finished.emit()
         self.timings_logfile_dict['laser']['off'].append(time.time_ns())
 
 
@@ -837,7 +869,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def export_experiment(self):
         self.info_logfile_dict['roi'].append(self.roi_list)
         self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
-        self.info_logfile_dict['binning'].append(self.binning)
+        self.info_logfile_dict['binning'].append(self.bin_size)
         self.info_logfile_dict['fps'].append(self.internal_frame_rate)
         self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
         with open(self.info_logfile_path, "w") as file:
@@ -866,11 +898,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def run_experiment(self):
         self.initialize_experiment()
         dlp_worker = Worker(self.dlp_auto_control)
-        self.threadpool.start(dlp_worker)
-        self.laser_on()
         self.stream()
-        dlp_signal_end.finished.connect(laser_off)
-        laser_signal_end.finished.connect(stop_stream)
+        time.sleep(.5)
+        self.laser_on()
+        time.sleep(1)
+        self.threadpool.start(dlp_worker)  ## in those experiment the dlp function drives the camera and laser stops
 
 
 
