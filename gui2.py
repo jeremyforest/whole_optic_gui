@@ -22,6 +22,7 @@ import json
 from datetime import datetime, timezone
 from multiprocessing import Process
 import traceback
+import subprocess
 
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
@@ -58,7 +59,6 @@ class Worker(QRunnable):
     :param kwargs: Keywords to pass to the callback function
 
     '''
-
     def __init__(self, fn, *args, **kwargs):
         super(Worker, self).__init__()
         # Store constructor arguments (re-used for processing)
@@ -86,8 +86,6 @@ class Worker(QRunnable):
             self.signals.result.emit(result)  # Return the result of the processing
         finally:
             self.signals.finished.emit()  # Done
-
-
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -194,6 +192,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.camera_distortion_matrix = []
         self.dlp_image_path = []
         self.calibration_dlp_camera_matrix_path = 'dlp/calibration_matrix.json'
+        self.images = []
+        self.image_list = []
+        self.image_reshaped = []
 
         ## folder widget (top left)
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
@@ -230,6 +231,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.update_internal_frame_rate_button.clicked.connect(self.update_internal_frame_rate)
         self.stop_stream_button.clicked.connect(self.stop_stream)
         self.timer = QTimer()
+        self.timer.timeout.connect(self.update_plot)
 
         ## roi
         self.save_ROI_button.clicked.connect(self.roi)
@@ -367,18 +369,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.save_as_png(self.image_reshaped, image_name)
 
     def stream(self):
-         self.images = []
-         self.image_list = []
          self.timings_logfile_dict['camera'] = []
          image_processing_worker = Worker(self.processing_images)
          image_processing_worker.signals.result.connect(self.print_output)
          image_processing_worker.signals.finished.connect(self.thread_complete)
          #image_processing_worker.signals.progress.connect(self.progress_fn)
          self.threadpool.start(image_processing_worker)
+         self.timer.start(100)
 
     def stop_stream(self):
         # self.image_processing_worker.terminate
         acquire_images = False
+        return self.acquire_images # necesarry?
 
     def processing_images(self):    #,progress_callback):
         acquire_images = True
@@ -394,7 +396,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.image = self.images[0]  ## keeping only the 1st image for GUI display
                 self.image_reshaped = self.image.reshape(int(self.x_dim/self.bin_size),
                                                         int(self.y_dim/self.bin_size))  ## image needs reshaping for show
-                self.graphicsView.setImage(self.image_reshaped)
+                # self.graphicsView.setImage(self.image_reshaped)
                 # progress_callback.emit(n*100/4)
                 print(f"Acquired {image_acquired} images")
                 image_acquired += 1
@@ -404,6 +406,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.timings_logfile_dict['camera'].append(times)
         self.cam.end_acquisition()
         self.saving_images(self.images, self.times)
+
+    def update_plot(self):
+        if self.image_reshaped == []:
+            pass
+        else:
+            self.graphicsView.setImages(self.image_reshaped)
 
     def saving_images(self, images, times):
         if self.saving_check.isChecked():
@@ -749,10 +757,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## HDMI Video Input mode
         elif self.display_mode_combobox.currentIndex == 2:  ## HDMI video sequence
             if index == 0: ## Generate ROI Files and Compile Movie From Images
+                self.display_hdmi_video()
                 self.generate_one_image_per_roi()
                 self.movie_from_images()
             if index == 1: ## Choose HDMI Video Sequence
-                vlc_path = "C:\Program Files (x86)\VideoLAN\VLC\vlc.exe"
+                vlc_path = "C:/Program Files (x86)/VideoLAN/VLC/vlc.exe"
                 video_path = f"{self.path}/dlp_images/dlp_movie.avi"
                 options = "--qt-fullscreen-screennumber=1 -f"
                 subprocess.call([vlc_path, options, video_path])

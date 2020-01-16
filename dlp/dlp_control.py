@@ -61,10 +61,14 @@ class Dlp():
 	def display_static_image(self, file_path):
 		self.dlp.displayStaticImage(file_path)
 
+	## hdmi
+	def display_hdmi_video(self):
+		self.dlp.setModeToHDMIVideo()
+
 	## pattern of images
 	def display_image_sequence(self, image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime):
 		pdb.set_trace()
-		
+
 		images = os.listdir(image_folder)
 #		numOfPatters = len(images)
 #		self.dlp.setPatternSeqSetting()
@@ -108,15 +112,11 @@ if __name__ == "__main__":
 
 #	dlp.set_display_mode('static')
 #	dlp.display_static_image('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/ROI_warped_0.bmp')
-	
-	
+
+
 #
 	InputTriggerDelay = 0
 	AutoTriggerPeriod = 3333334
 	ExposureTime = 3333334
 
 	dlp.display_image_sequence('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/', InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
-
-
-
-

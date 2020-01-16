@@ -3,6 +3,7 @@ Written by Oktay Göktaş, University of Toronto, Department of Physics,
 January 2018.   Free to use. The code is just a simple python solution to use dmd and  provided as is.
 Please use at your own risk. Your device might be different than the one used on this study.
 The usage of the functions are given on the example file Test-dmd.py"""
+
 import socket
 import sys
 import numpy as np
@@ -27,8 +28,6 @@ class dm365():
 	        PORT = 21845
 	    print('Connecting to ' + str(HOST) + ' and ' + str(PORT))
 
-
-
 	    #resp = s.connect((HOST, PORT))
 	    resp = self.s.connect_ex((HOST, PORT))
 	    if (resp==0):
@@ -39,39 +38,30 @@ class dm365():
 	        quit()
 
 	##############################
-	##############################
 	def close(self):
-	    #""" Closing Connection"""
+	    """ Closing Connection"""
 	    #print(self.s)
-
 	    resp =  self.s.close()
-
 	    return 0
-	##############################
 
-	##############################
 	##############################
 	def sendData(self, packet):
-	    #""" Sending Data"""
+	    """ Sending Data"""
 
 	    resp = self.s.sendall(packet)
 	    ans = self.s.recv(1024)
-
 	    print(ans)
 
 	    if (ans[0] == 0):
 	        print('The device returned LightCrafter System Busy Packet: Try again')
-
 	    if (ans[0] == 1):
 	        print(self.checkError( int( ans[6] ) ))
 
 	    return ans
-	##############################
-	##########################
-	##########################
 
+	##########################
 	def checkError(errorByte):
-		#"""Function for checkin errors"""
+		"""Function for checkin errors"""
 	    return {
 	        1: 'Command execution failed with unknown error',
 	        2: 'Invalid command',
@@ -87,10 +77,8 @@ class dm365():
 	    }.get(errorByte, 'Uknown Error')
 
 	##############################
-	##########################
 	def getDisplayMode(self):
-	    #""" Getting Display Mode""
-
+	    """ Getting Display Mode"""
 	    print('Reading display mode.  ')
 	    currentPacket = b'\x04\x01\x01\x00\x00\x00\x06'
 	    ans = self.sendData( currentPacket)
@@ -106,66 +94,57 @@ class dm365():
 	        print('Dmd is in Pattern Sequence Display Mode')
 	    else:
 	        print('Something is wrong: Returned data is out of range Mode')
-
 	    return ans
+
 	#######################
 	def getRevision(self):
-	    #""" Getting Revision"""
-
+	    """ Getting Revision"""
 	    # 0x00 – DM365 SW Revision
-	    #  0x10 – FPGA Firmware Revision
+	    # 0x10 – FPGA Firmware Revision
 	    # 0x20 – MSP430 SW Revision
 	    print('Reading revision')
 	    currentPacket = b'\x04\x01\x00\x00\x01\x00\x00\x06'
 	    ans = self.sendData(currentPacket)
 	    self.printSrting(ans[6:len(ans)-1])
 	    return ans
-	######################
-	##########################
-	##########################
+
 	def printSrting(ans):
 	    msg = ans.decode('utf-8')
 	    print(msg)
 
-	##########################
-	#  Display Static Image   functions
-	##########################
+	######################################
+	##  Display Static Image functions  ##
+	######################################
 	def setModeToStaticImage(self):#Setting  the display mode to Static Image Mode
-	    #""" Setting  the display mode to Static Image Mode"""
-	    #For Static images 6th byte must be 0
+	    """ Setting  the display mode to Static Image Mode"""
+	    # For Static images 6th byte must be 0
 	    print('Set mode to StaticImage')
 	    currentPacket = b'\x02\x01\x01\x00\x01\x00\x00\x05'
 	    ans = self.sendData(currentPacket)
 	    return ans
 
-	##########################
-	##########################
 	def displayStaticImage(self,fileName):
-		#""" Setting  the display mode to Static Image Mode"""
+		""" Setting  the display mode to Static Image Mode"""
 	    print('Display  Static Image')
 	    self.setModeToStaticImage()
 	    imData = []
 	    header =  []
-	    header =  bytearray(b'\x02\x01\x05\x00\x00\x00')#The last byte is being changed in the makeAndSendPAcket func
-	    imData = self.readBMPImage(fileName)#  'Square_wx80_wy250.bmp'
+	    header =  bytearray(b'\x02\x01\x05\x00\x00\x00') # The last byte is being changed in the makeAndSendPAcket function
+	    imData = self.readBMPImage(fileName) #'Square_wx80_wy250.bmp'
 	    ans = self.makeAndSendPacket(header, imData)
 	    return  ans
 
-	##########################
-	#   INTERNAL TEST PATTERN FUNC
-	##########################
-	def setModeToInternalTestPattern(self):#Setting  the display mode to Static Image Mode
+	######################################
+	##  INTERNAL TEST PATTERN FUNCTION  ##
+	######################################
+	def setModeToInternalTestPattern(self): #Setting  the display mode to Static Image Mode
 	    #1 For Static images 6th byte 1
-	    #
 	    print('set Mode To Internal TestPattern')
 	    currentPacket = b'\x02\x01\x01\x00\x01\x00\x01\x06'
 	    ans = self.sendData(currentPacket)
 	    return ans
-	##########################
-	##########################
-	##########################
-	##########################
 
+	#######################
 	def displayInternalTestPattern(self,n):
 	    print('Display Internal TestPattern')
 	    #Give an integer between 0 to 14 as argument
@@ -189,9 +168,11 @@ class dm365():
 	    currentPacket = self.appendCheckSum(currentPacket)
 	    ans = self.sendData(currentPacket)
 	    return ans
-	###############################
-	##### PACKET PREP FUNCTIONS
-	###############################
+
+
+	###########################
+	## PACKET PREP FUNCTIONS ##
+	###########################
 	def appendCheckSum(self, packet):
 	    #packet = bytearray(b'\x04\x01\x01\x00\x01\x00')
 	    sumPacket = sum(packet)
@@ -201,12 +182,11 @@ class dm365():
 	    packet.append(checksum[0])
 	    return packet
 	#########################
-	##########################
+
 	def getpayloadLength(self, payload):
 	    lenpayloadMSB = int(math.floor(len(payload)/256))
 	    lenpayloadLSB = int(len(payload) % 256)
 	    return [lenpayloadLSB, lenpayloadMSB]
-	##########################
 	##########################
 
 	def printData(self, data, length=0):
@@ -219,25 +199,17 @@ class dm365():
 	    print(out)
 
 	##########################
-	##########################
 	def printSrting(self, ans):
 	    msg = ans.decode('utf-8')
 	    print(msg)
 
 	#########################
-	##########################
-
 	def readBMPImage(self, bmpFile):
 	    with open(bmpFile, 'rb') as f:
 	        imdata =bytearray((f.read()))
 	        return imdata
 
-
-
-
 	##########################
-	##########################
-
 	def makeAndSendPacket(self, header, imData):
 	    MAX_PACKET_LENGTH = 512 #Max 65535
 	    payload = []
@@ -246,9 +218,7 @@ class dm365():
 	    blockSize = math.ceil(float(len(imData)) / float(MAX_PACKET_LENGTH))
 	    print('blockSize = {}'.format(blockSize))
 
-
 	    for i in np.arange(blockSize):
-	           
 	        if(i==0):
 	            payload = imData[0:MAX_PACKET_LENGTH]
 
@@ -256,30 +226,20 @@ class dm365():
 	            print('Sending First  paket')
 	            #self.printData(header)
 	            #self.printData(payload)
-
 	        else:
-
 	            if (i== blockSize-1):
 	                payload = imData[i*MAX_PACKET_LENGTH:]
-
 	                header[3] = int(3)
 	                print('Sending last  paket')
 	                #self.printData(header)
 	                #self.printData(payload)
 	            else:
-
 	                payload = imData[i*MAX_PACKET_LENGTH:(i+1)*MAX_PACKET_LENGTH]
-
 	                header[3] = int(2)
 
-
 	        [lenpayloadLSB,lenpayloadMSB] =  self.getpayloadLength(payload)
-
-
-
 	        header[4] = lenpayloadLSB
 	        header[5] =  lenpayloadMSB
-
 	        print(header)
 
 	        currentPacket = bytearray(header)
@@ -290,7 +250,7 @@ class dm365():
 	        ans = self.sendData(currentPacket)
 
 	    return ans
-	##########################
+
 	##########################
 	def setDisplaySetting(self, flip_X=0, flip_Y=0, rotate=0):
 	    # Give arguments as one if you want actions
@@ -310,7 +270,6 @@ class dm365():
 	    return ans
 
 	##########################
-	##########################
 	def getDisplaySetting(self):
 	    # Give arguments as one if you want actions
 	    print('Getting The Display Setting  ')
@@ -329,23 +288,27 @@ class dm365():
 	    print('The Display Setting are  flip_X={} , flip_Y={},  rotate={}'.format(flip_X, flip_Y, rotate))
 	    #self.printData(ans)
 	    return ans
-	##########  *****************************************************************
-	##########  *****************************************************************
-	##########   Commands for pattern sequence Display
-	##########  ********** Display******************************************************
-	##########  *****************************************************************
-	#########################
-	### Commands for pattern sequence    ####
-	##########################
+
+	###################################
+	## Commands for hdmi video input ##
+	###################################
+	def setModeToHDMIVideo(self):
+		"""Setting the display mode to HDMI Mode"""
+		currentPacket = []
+		currentPacket = b'\x02\x01\x01\x00\x01\x00\x02\x07'
+		ans = self.sendData(currentPacket)
+	    return ans
+
+	####################################
+	## Commands for pattern sequence  ##
+	####################################
 	def setModeToPatternSequenceDisplay(self):
-	    #""" Setting  the display mode to PatternSequence Mode"""
-	    #
+	    """ Setting  the display mode to PatternSequence Mode"""
 	    currentPacket = []
 	    currentPacket = b'\x02\x01\x01\x00\x01\x00\x04\x09'
 	    ans = self.sendData(currentPacket)
 	    return ans
 
-	##########################
 	##########################
 	def setPatternSeqSetting(self, bitDepth=8, numOfPatters=2, Mode =0, InputTriggerType = 1, InputTriggerDelay = 0, AutoTriggerPeriod = 3333334, ExposureTime = 3333334, LEDSelect =1  ):#Setting  the display mode to Static Image Mode
 	    #This needs to be worked,LEDSelect =1,
@@ -358,7 +321,7 @@ class dm365():
 	    payload.append(numOfPatters)
 	    payload.append(Mode)
 	    payload.append(int(InputTriggerType))
-	    #
+
 	    payload.append( InputTriggerDelay & 0xff )
 	    payload.append( (InputTriggerDelay>>8) & 0xff )
 	    payload.append( (InputTriggerDelay>>16) & 0xff )
@@ -380,7 +343,6 @@ class dm365():
 	    header.append(lenpayloadLSB)
 	    header.append(lenpayloadMSB)
 
-
 	    currentPacket = bytearray(header)
 	    currentPacket.extend(payload)
 	    currentPacket = self.appendCheckSum(currentPacket)
@@ -388,9 +350,6 @@ class dm365():
 	    ans = self.sendData(currentPacket)
 	    return ans
 
-
-
-	##########################
 	##########################
 	def PatternDefinition(self, n, fileName):
 	    # n is the pattern number to be loaded
@@ -400,32 +359,29 @@ class dm365():
 	    imData = bytearray(imData)
 	    imData.append(int(n)) # This is the pattern sequence number
 	    header =  []
-	    header =  bytearray(b'\x02\x04\x01\x00\x00\x00')#The last 3 bbytes(flag, LSB and MSB) is being changed in the makeAndSendPAcket func
-	    imData.extend(self.readBMPImage(fileName) )#  'Square_wx80_wy250.bmp'
+	    header =  bytearray(b'\x02\x04\x01\x00\x00\x00') # The last 3 bytes(flag, LSB and MSB) are being changed in the makeAndSendPAcket func
+	    imData.extend(self.readBMPImage(fileName)) # 'Square_wx80_wy250.bmp'
 	    ans = self.makeAndSendPacket(header, imData)
 	    return ans
 
-
-
 	##########################
-	##########################
-	def startPatternSequence(self):#Starting Patter Sequence
-	    #""" Starting Patter Sequence"""
+	def startPatternSequence(self): # Starting Pattern Sequence
+	    """ Starting Patter Sequence"""
 	    print('Starting Patter Sequence')
 	    currentPacket = bytearray(b'\x02\x04\x02\x00\x01\x00\x01')
 	    currentPacket = self.appendCheckSum(currentPacket)
 	    ans = self.sendData(currentPacket)
 	    return ans
-	##########################
+
 	##########################
 	def stoptPatternSequence(self):#Stopping Patter Sequence
-	    #""" Stopping Patter Sequence"""
+	    """ Stopping Patter Sequence"""
 	    print('Stopping Patter Sequence')
 	    currentPacket = bytearray(b'\x02\x04\x02\x00\x01\x00\x00')
 	    currentPacket = self.appendCheckSum(currentPacket)
 	    ans = self.sendData(currentPacket)
 	    return ans
-	##########################
+
 	##########################
 	def displayPatterns(self, n1, n2):
 	    #This command (supported in DM365 firmware version 3.0 or greater) continuously displays the selected
@@ -442,9 +398,4 @@ class dm365():
 	    currentPacket = self.appendCheckSum(currentPacket)
 	    ans = self.sendData(currentPacket)
 	    return ans
-	##########################
-	##########################
-
-
-	##########################
 	##########################
