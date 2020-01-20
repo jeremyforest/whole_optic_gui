@@ -47,7 +47,6 @@ class dm365():
 	##############################
 	def sendData(self, packet):
 	    """ Sending Data"""
-
 	    resp = self.s.sendall(packet)
 	    ans = self.s.recv(1024)
 	    print(ans)
@@ -56,12 +55,11 @@ class dm365():
 	        print('The device returned LightCrafter System Busy Packet: Try again')
 	    if (ans[0] == 1):
 	        print(self.checkError( int( ans[6] ) ))
-
 	    return ans
 
 	##########################
 	def checkError(errorByte):
-		"""Function for checkin errors"""
+	    """Function for checkin errors"""
 	    return {
 	        1: 'Command execution failed with unknown error',
 	        2: 'Invalid command',
@@ -124,7 +122,7 @@ class dm365():
 	    return ans
 
 	def displayStaticImage(self,fileName):
-		""" Setting  the display mode to Static Image Mode"""
+	    """ Setting  the display mode to Static Image Mode"""
 	    print('Display  Static Image')
 	    self.setModeToStaticImage()
 	    imData = []
@@ -169,7 +167,6 @@ class dm365():
 	    ans = self.sendData(currentPacket)
 	    return ans
 
-
 	###########################
 	## PACKET PREP FUNCTIONS ##
 	###########################
@@ -181,14 +178,14 @@ class dm365():
 	    print(checksum)
 	    packet.append(checksum[0])
 	    return packet
-	#########################
 
+	#########################
 	def getpayloadLength(self, payload):
 	    lenpayloadMSB = int(math.floor(len(payload)/256))
 	    lenpayloadLSB = int(len(payload) % 256)
 	    return [lenpayloadLSB, lenpayloadMSB]
-	##########################
 
+	##########################
 	def printData(self, data, length=0):
 	    if (length>0):
 	        out = [data[i] for i in range(length)]
@@ -237,9 +234,9 @@ class dm365():
 	                payload = imData[i*MAX_PACKET_LENGTH:(i+1)*MAX_PACKET_LENGTH]
 	                header[3] = int(2)
 
-	        [lenpayloadLSB,lenpayloadMSB] =  self.getpayloadLength(payload)
+	        [lenpayloadLSB,lenpayloadMSB] = self.getpayloadLength(payload)
 	        header[4] = lenpayloadLSB
-	        header[5] =  lenpayloadMSB
+	        header[5] = lenpayloadMSB
 	        print(header)
 
 	        currentPacket = bytearray(header)
@@ -272,7 +269,7 @@ class dm365():
 	##########################
 	def getDisplaySetting(self):
 	    # Give arguments as one if you want actions
-	    print('Getting The Display Setting  ')
+	    print('Getting The Display Setting')
 	    payload = bytearray([])
 	    header =[]
 	    currentPacket = []
@@ -293,10 +290,10 @@ class dm365():
 	## Commands for hdmi video input ##
 	###################################
 	def setModeToHDMIVideo(self):
-		"""Setting the display mode to HDMI Mode"""
-		currentPacket = []
-		currentPacket = b'\x02\x01\x01\x00\x01\x00\x02\x07'
-		ans = self.sendData(currentPacket)
+	    """Setting the display mode to HDMI Mode"""
+	    currentPacket = []
+	    currentPacket = b'\x02\x01\x01\x00\x01\x00\x02\x07'
+	    ans = self.sendData(currentPacket)
 	    return ans
 
 	####################################
@@ -354,7 +351,7 @@ class dm365():
 	def PatternDefinition(self, n, fileName):
 	    # n is the pattern number to be loaded
 	    self.setModeToPatternSequenceDisplay()
-	    print('defining and sending the ' + str(n) +'th pattern data')
+	    print('defining and sending the ' + str(n) + 'th pattern data')
 	    imData = []
 	    imData = bytearray(imData)
 	    imData.append(int(n)) # This is the pattern sequence number
@@ -399,3 +396,9 @@ class dm365():
 	    ans = self.sendData(currentPacket)
 	    return ans
 	##########################
+
+
+
+if __name__ == "__main__":
+	dlp = dm365()
+	dlp.connect()

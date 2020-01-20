@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1900</width>
+    <width>1945</width>
     <height>1170</height>
    </rect>
   </property>
@@ -21,7 +21,7 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+    <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -372,6 +372,19 @@
      </property>
      <property name="text">
       <string>Stop Stream</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="subArray_mode_radioButton_2">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>121</width>
+       <height>20</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>SubArray mode</string>
      </property>
     </widget>
    </widget>
@@ -1842,7 +1855,7 @@
       <x>1230</x>
       <y>850</y>
       <width>661</width>
-      <height>61</height>
+      <height>191</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -1855,7 +1868,14 @@
      <enum>QFrame::Box</enum>
     </property>
     <layout class="QGridLayout" name="gridLayout_7">
-     <item row="3" column="1">
+     <item row="0" column="4">
+      <widget class="QPushButton" name="load_experiment_button">
+       <property name="text">
+        <string>Load Experiment</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
       <widget class="QLabel" name="automatic_protocols_label">
        <property name="font">
         <font>
@@ -1869,25 +1889,198 @@
        </property>
       </widget>
      </item>
-     <item row="3" column="3">
-      <widget class="QPushButton" name="load_experiment_button">
+     <item row="0" column="3">
+      <widget class="QPushButton" name="export_experiment_button">
        <property name="text">
-        <string>Load Experiment</string>
+        <string>Export Experiment</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="4">
+     <item row="0" column="5">
       <widget class="QPushButton" name="run_experiment_button">
        <property name="text">
         <string>Run Experiment</string>
        </property>
       </widget>
      </item>
-     <item row="3" column="2">
-      <widget class="QPushButton" name="export_experiment_button">
-       <property name="text">
-        <string>Export Experiment</string>
+     <item row="1" column="1" rowspan="4" colspan="5">
+      <widget class="QTabWidget" name="auto_protocol_tabWidget">
+       <property name="currentIndex">
+        <number>0</number>
        </property>
+       <widget class="QWidget" name="DLP_configuration">
+        <attribute name="title">
+         <string>DLP_configuration</string>
+        </attribute>
+        <widget class="QLineEdit" name="dlp_time_on_lineEdit">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>30</y>
+           <width>113</width>
+           <height>23</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QLabel" name="dlp_time_on_label">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>30</y>
+           <width>101</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>DLP time ON</string>
+         </property>
+        </widget>
+        <widget class="QLabel" name="dlp_time_off_label">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>60</y>
+           <width>101</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>DLP time OFF</string>
+         </property>
+        </widget>
+        <widget class="QLineEdit" name="dlp_time_off_lineEdit">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>60</y>
+           <width>113</width>
+           <height>23</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QLabel" name="number_of_sequence_label">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>90</y>
+           <width>131</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Number of sequence</string>
+         </property>
+        </widget>
+        <widget class="QLineEdit" name="number_of_sequence_lineEdit">
+         <property name="geometry">
+          <rect>
+           <x>160</x>
+           <y>90</y>
+           <width>113</width>
+           <height>23</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QLabel" name="number_of_sequence_repetition_label">
+         <property name="geometry">
+          <rect>
+           <x>310</x>
+           <y>10</y>
+           <width>201</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Number of  sequence repetition</string>
+         </property>
+        </widget>
+        <widget class="QLineEdit" name="number_sequence_repetition_lineEdit">
+         <property name="geometry">
+          <rect>
+           <x>520</x>
+           <y>10</y>
+           <width>113</width>
+           <height>23</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QLabel" name="intervalle_between_sequences_label">
+         <property name="geometry">
+          <rect>
+           <x>310</x>
+           <y>40</y>
+           <width>201</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>Intervalle between sequences</string>
+         </property>
+        </widget>
+        <widget class="QLineEdit" name="intervalle_between_sequences_lineEdit">
+         <property name="geometry">
+          <rect>
+           <x>520</x>
+           <y>40</y>
+           <width>113</width>
+           <height>23</height>
+          </rect>
+         </property>
+        </widget>
+        <widget class="QLabel" name="dlp_mode_label">
+         <property name="geometry">
+          <rect>
+           <x>20</x>
+           <y>0</y>
+           <width>101</width>
+           <height>21</height>
+          </rect>
+         </property>
+         <property name="text">
+          <string>DLP mode</string>
+         </property>
+        </widget>
+        <widget class="QComboBox" name="dlp_mode_comboBox">
+         <property name="geometry">
+          <rect>
+           <x>120</x>
+           <y>0</y>
+           <width>161</width>
+           <height>23</height>
+          </rect>
+         </property>
+         <item>
+          <property name="text">
+           <string>Static image</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>HDMI video</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Pattern Sequence</string>
+          </property>
+         </item>
+        </widget>
+       </widget>
+       <widget class="QWidget" name="undefined">
+        <attribute name="title">
+         <string>undefined</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="undefined">
+        <attribute name="title">
+         <string>undefined</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="Scanning">
+        <attribute name="title">
+         <string>Scanning</string>
+        </attribute>
+       </widget>
       </widget>
      </item>
     </layout>
@@ -1896,7 +2089,7 @@
     <property name="geometry">
      <rect>
       <x>1230</x>
-      <y>920</y>
+      <y>1050</y>
       <width>661</width>
       <height>71</height>
      </rect>
@@ -1911,13 +2104,6 @@
      <enum>QFrame::Box</enum>
     </property>
     <layout class="QGridLayout" name="gridLayout_8">
-     <item row="3" column="2">
-      <widget class="QPushButton" name="stim_button">
-       <property name="text">
-        <string>Stim</string>
-       </property>
-      </widget>
-     </item>
      <item row="3" column="1">
       <widget class="QLabel" name="classical_electrophysiology_label">
        <property name="font">
@@ -1932,10 +2118,24 @@
        </property>
       </widget>
      </item>
-     <item row="4" column="2">
-      <widget class="QPushButton" name="save_stim_timings_button">
+     <item row="4" column="1">
+      <widget class="QRadioButton" name="record_electrophysiological_trace_radioButton">
        <property name="text">
-        <string>Save stim timings</string>
+        <string>Record electrophysiological trace ?</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="2">
+      <widget class="QPushButton" name="record_trace_button">
+       <property name="text">
+        <string>Record Trace</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="2">
+      <widget class="QPushButton" name="display_trace_button">
+       <property name="text">
+        <string>Display Trace</string>
        </property>
       </widget>
      </item>
@@ -1947,7 +2147,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1900</width>
+     <width>1945</width>
      <height>20</height>
     </rect>
    </property>

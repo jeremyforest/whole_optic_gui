@@ -24,6 +24,8 @@ class Dlp():
 			self.dlp.setModeToStaticImage()
 		elif mode == 'internal':
 			self.dlp.setModeToInternalTestPattern()
+		elif mode == 'hdmi':
+			self.dlp.setModeToHDMIVideo()
 		elif mode == 'pattern':
 			self.dlp.setModeToPatternSequenceDisplay()
 
@@ -67,34 +69,30 @@ class Dlp():
 
 	## pattern of images
 	def display_image_sequence(self, image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime):
-		pdb.set_trace()
-
-		images = os.listdir(image_folder)
-#		numOfPatters = len(images)
+		patterns = os.listdir(image_folder)
 #		self.dlp.setPatternSeqSetting()
-#		self.dlp.setPatternSeqSetting(bitDepth = 8, numOfPatters = numOfPatters, Mode = 0, InputTriggerType = 1,
-#										InputTriggerDelay = InputTriggerDelay, AutoTriggerPeriod = AutoTriggerPeriod,
-#										ExposureTime = ExposureTime, LEDSelect =1)
-#		self.dlp.setModeToPatternSequenceDisplay()
+		self.dlp.setPatternSeqSetting(bitDepth = 8, numOfPatters = len(patterns), Mode = 0,
+									InputTriggerType = 1, InputTriggerDelay = InputTriggerDelay,
+									AutoTriggerPeriod = AutoTriggerPeriod,
+									ExposureTime = ExposureTime, LEDSelect =1)
+		self.dlp.setModeToPatternSequenceDisplay()
 
-		self.dlp.PatternDefinition(0, image_folder + images[0])
-		time.sleep(5)
-		self.dlp.PatternDefinition(1, image_folder + images[1])
-		time.sleep(5)
-		self.dlp.PatternDefinition(2, image_folder + images[2])
-		time.sleep(5)
-		self.dlp.PatternDefinition(3, image_folder + images[3])
-		time.sleep(5)
-		self.dlp.PatternDefinition(4, image_folder + images[4])
+		for pattern in patterns:
+			self.dlp.PatternDefinition(pattern, image_folder + pattern)
+			time.sleep(10)
+		# self.dlp.PatternDefinition(0, image_folder + images[0])
+		# time.sleep(5)
+		# self.dlp.PatternDefinition(1, image_folder + images[1])
+		# time.sleep(5)
+		# self.dlp.PatternDefinition(2, image_folder + images[2])
+		# time.sleep(5)
+		# self.dlp.PatternDefinition(3, image_folder + images[3])
+		# time.sleep(5)
+		# self.dlp.PatternDefinition(4, image_folder + images[4])
 
-#		i=0
-#		for image in images:
-#			print(image)
-#			print(i)
-#			self.dlp.PatternDefinition(i, image_folder + image)
-#			i+=1
 		self.dlp.startPatternSequence()
-		time.sleep(30)
+		time_for_patterns = 15 * len(pattern) ## time for loading and disp 1 pattern * nb of patterns
+		time.sleep(time_for_patterns)
 		self.dlp.stoptPatternSequence()
 
 	## disconnect
@@ -113,10 +111,10 @@ if __name__ == "__main__":
 #	dlp.set_display_mode('static')
 #	dlp.display_static_image('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/ROI_warped_0.bmp')
 
-
 #
-	InputTriggerDelay = 0
-	AutoTriggerPeriod = 3333334
-	ExposureTime = 3333334
-
-	dlp.display_image_sequence('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/', InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
+##
+#	InputTriggerDelay = 0
+#	AutoTriggerPeriod = 3333334
+#	ExposureTime = 3333334
+#
+#	dlp.display_image_sequence('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/', InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
