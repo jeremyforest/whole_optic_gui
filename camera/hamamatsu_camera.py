@@ -758,7 +758,7 @@ class HamamatsuCamera(object):
         # number of frames for a fixed length acquisition
         #
         if self.acquisition_mode is "run_till_abort":
-            n_buffers = int(2.0*self.getPropertyValue("internal_frame_rate")[0])
+            n_buffers = int(6.0*self.getPropertyValue("internal_frame_rate")[0])
         elif self.acquisition_mode is "fixed_length":
             n_buffers = self.number_frames
 
@@ -1023,33 +1023,41 @@ if (__name__ == "__main__"):
 #                 print(param, hcam.getPropertyValue(param)[0])
 #
          # Test 'run_till_abort' acquisition.
-#         if True:
-#             print("Testing run till abort acquisition")
-#             hcam.startAcquisition()
-#             cnt = 0
-#             for i in range(20):
-#                 [frames, dims, timing] = hcam.getFrames()
-#                 print(frames, dims, timing)
-#                 for aframe in frames:
-#                     print(cnt, aframe[0:5])
-#                     cnt += 1
-#
-#             print("Frames acquired: " + str(cnt))
-#             hcam.stopAcquisition()
-#
+        if True:
+             timings = []
+             print("Testing run till abort acquisition")
+             hcam.startAcquisition()
+             cnt = 0
+             for i in range(2000):
+                 [frames, dims, timing] = hcam.getFrames()
+                 timings.append(timing)
+                 print(frames, dims, timing)
+                 for aframe in frames:
+                     print(cnt, aframe[0:5])
+                     cnt += 1
+            
+             print("Frames acquired: " + str(cnt))
+             hcam.stopAcquisition()
+             print(timings)
 #         # Test 'fixed_length' acquisition.
-#         if True:
-#             for j in range (10000):
+#        if True:
+#             timings = []
+#             import time
+#             import random
+#             for j in range (10):
 #                 print("Testing fixed length acquisition")
 #                 hcam.setACQMode("fixed_length", number_frames = 10)
 #                 hcam.startAcquisition()
 #                 cnt = 0
 #                 iterations = 0
 #                 while cnt < 11 and iterations < 20:
-#                     [frames, dims] = hcam.getFrames()
+#                     [frames, dims, timing] = hcam.getFrames()
+#                     print(timing)
+#                     timings.append(timing)
 #                     waitTime = random.random()*0.03
 #                     time.sleep(waitTime)
 #                     iterations += 1
+#                     print(iterations)
 #                     print('Frames loaded: ' + str(len(frames)))
 #                     print('Wait time: ' + str(waitTime))
 #                     for aframe in frames:
@@ -1060,7 +1068,7 @@ if (__name__ == "__main__"):
 #                     input("Press enter to continue")
 #                 print("Frames acquired: " + str(cnt))
 #                 hcam.stopAcquisition()
-#
+
 #                 hcam.setACQMode("run_till_abort")
 #                 hcam.startAcquisition()
 #                 time.sleep(random.random())

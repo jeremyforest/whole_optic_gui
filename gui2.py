@@ -1,5 +1,5 @@
 ## PyQT5
-from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, pyqtSignal, QThreadPool, QObject, QTimer
+from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, pyqtSignal, QThreadPool, QObject, QTimer, QEventLoop
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, QMessageBox, QProgressBar, QGraphicsScene, QInputDialog
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from multiprocessing import Process
 import traceback
 import subprocess
+import PyDAQmx
 
 def debug_trace():
   '''Set a tracepoint in the Python debugger that works with Qt'''
@@ -88,11 +89,16 @@ class Worker(QRunnable):
         finally:
             self.signals.finished.emit()  # Done
 
+def custom_sleep_function(ms):
+    c = time.perf_counter()
+    while (time.perf_counter() - c)*1000 < ms:
+        QApplication.processEvents()   #### this should probably be put in its own thread to avoid forcing gui update
+#        pass
+    return (time.perf_counter() - c)*1000
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
-
         self.setupUi(self)
         self.retranslateUi(self)
 
@@ -112,7 +118,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         parser.add_argument("--laser", default=False, action="store_true" , help="to load the laser functions")
         parser.add_argument("--dlp", default=False, action="store_true" , help="to load the dlp functions")
         parser.add_argument("--controler", default=False, action="store_true" , help="to load the controller functions")
-        parser.add_argument("--electrophy", default=False, action="store_true", help="to load the bridge and voltage clamp amplifier")
+        parser.add_argument("--ephy", default=False, action="store_true", help="to load the bridge and voltage clamp amplifier")
         args = parser.parse_args()
 
         if args.camera is True:
@@ -135,7 +141,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
              print("controler functions are not loaded")
 
-        if args.bridge is True:
+        if args.ephy is True:
             self.activate_electrophysiology = True
         else:
             print("bridge functions are not loaded")
@@ -156,6 +162,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.current_binning_size_label_2.setText(str(self.cam.read_binning()))
             ## counters initialization (exposure time and fps)
             self.exposure_time_value.display(self.cam.read_exposure())
+            self.internal_frame_rate = self.cam.get_internal_frame_rate()
             self.internal_frame_rate_label.setText(str(self.internal_frame_rate))
             ## set property as wanted
             self.cam.hcam.setPropertyValue('defect_correct_mode', 1)  ## necessary ?
@@ -172,28 +179,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.dlp = Dlp()
             self.dlp.connect()
             ## custom signals
-            dlp_signal = Signals()
-            dlp_signal.finished.connect(self.turn_dlp_off)
+            self.dlp_signal = Signals()
+            self.dlp_signal.finished.connect(self.turn_dlp_off)
         ##### laser #####
         if self.activate_laser is True:
             from laser.laser_control import CrystalLaser
             self.laser = CrystalLaser()
             self.laser.connect()
             ## custom signals
-            laser_signal = Signals()
-            laser_signal.start.connect(self.laser_on)
-            laser_signal.finished.connect(self.laser_off)
+            self.laser_signal = Signals()
+            self.laser_signal.start.connect(self.laser_on)
+            self.laser_signal.finished.connect(self.laser_off)
         ##### manipulator #####
         if self.activate_controller is True:
             from controler.manipulator_command import Controler
             self.controler = Controler()
         ##### electrophysiology #####
         if self.activate_electrophysiology is True:
-            from electrophysiology.electrophysiology import StimVoltage, ReadingVoltage
-            self.ephy_stim = StimVoltage()
-            self.ephy_read_voltage = ReadingVoltage()
+            import PyDAQmx
+            self.ephy_signal = Signals()
+            self.ephy_signal.start.connect(self.start_recording)
+            self.ephy_signal.finished.connect(self.stop_recording)
+            self.recording = False
+            self.ephy_graph = False
+            
 
         ## variable reference for later use
+        self.path_init = None
         self.path = None
         self.path_raw_data = None
         self.save_images = False
@@ -203,9 +215,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.camera_distortion_matrix = []
         self.dlp_image_path = []
         self.calibration_dlp_camera_matrix_path = 'dlp/calibration_matrix.json'
+        ## load calibration matrix
+        self.calibration()
         self.images = []
         self.image_list = []
         self.image_reshaped = []
+        self.ephy_data = []
+        self.end_expe = False
+        self.channel_number=[2,6,10,14,16,18,20,22]
+        self.sampling_rate=1000
 
         ## folder widget (top left)
         self.initialize_experiment_button.clicked.connect(self.initialize_experiment)
@@ -220,9 +238,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.timings_logfile_dict['dlp']['on'] = []
         self.timings_logfile_dict['dlp']['off'] = []
         self.timings_logfile_dict['camera'] = []
-        self.timings_logfile_dict['ephys'] = {}
-        self.timings_logfile_dict['ephys']['on'] = []
-        self.timings_logfile_dict['ephys']['off'] = []
+        self.timings_logfile_dict['camera_bis'] = []
+        self.timings_logfile_dict['ephy'] = {}
+        self.timings_logfile_dict['ephy']['on'] = []
+        self.timings_logfile_dict['ephy']['off'] = []
+        self.timings_logfile_dict['ephy_stim'] = {}
+        self.timings_logfile_dict['ephy_stim']['on'] = []
+        self.timings_logfile_dict['ephy_stim']['off'] = []
 
         self.info_logfile_dict = {}
         self.info_logfile_dict['experiment creation date'] = None
@@ -231,6 +253,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.info_logfile_dict['binning'] = []
         self.info_logfile_dict['fov'] = []
         self.info_logfile_dict['fps'] = []
+        
+        self.times_bis = []
 
         ## camera widget
         self.snap_image_button.clicked.connect(self.snap_image)
@@ -277,14 +301,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.export_experiment_button.clicked.connect(self.export_experiment)
         self.load_experiment_button.clicked.connect(self.load_experiment)
         self.run_experiment_button.clicked.connect(self.run_experiment)
+        self.end_experiment_function = Signals()
+        self.end_experiment_function.finished.connect(self.end_experiment)
 
         ## electrophysiology
-        self.record_trace_button.clicked.connect(self.recording)
-        self.display_trace.clicked.connect(self.display_data)
+        self.record_trace_button.clicked.connect(self.init_voltage)
+        self.display_trace_button.clicked.connect(self.graph_voltage)
+        self.stimulation_button.clicked.connect(self.ephy_stim)
+        self.close_graph_button.clicked.connect(self.close_graph_windows)
 
-    ###################################
-    ####### utils functions ###########
-    ###################################
+
+    ####################################
+    ###### thread utils functions ######
+    ####################################
     def progress_fn(self, n):
         print("%d%% done" % n)
 
@@ -317,9 +346,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.timings_logfile_dict['dlp']['on'] = []
         self.timings_logfile_dict['dlp']['off'] = []
         self.timings_logfile_dict['camera'] = []
-        self.timings_logfile_dict['ephys'] = {}
-        self.timings_logfile_dict['ephys']['on'] = []
-        self.timings_logfile_dict['ephys']['off'] = []
+        self.timings_logfile_dict['camera_bis'] = []
+        self.timings_logfile_dict['ephy'] = {}
+        self.timings_logfile_dict['ephy']['on'] = []
+        self.timings_logfile_dict['ephy']['off'] = []
+        self.timings_logfile_dict['ephy_stim'] = {}
+        self.timings_logfile_dict['ephy_stim']['on'] = []
+        self.timings_logfile_dict['ephy_stim']['off'] = []
 
         self.info_logfile_dict = {}
         self.info_logfile_dict['experiment creation date'] = None
@@ -329,12 +362,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.info_logfile_dict['fov'] = []
         self.info_logfile_dict['fps'] = []
 
+        self.images = []
+        self.image_list = []
+        self.image_reshaped = []
+        self.ephy_data = []
+        
+        ## init perf_counter for timing events
+        self.perf_counter_init = time.perf_counter()
+        
         ## generate folder to save the data
-        if self.path == []:
-            self.path = QFileDialog.getExistingDirectory(None, 'Select a folder where you want to store your data:',
+        if self.path_init == None:
+            self.path_init = QFileDialog.getExistingDirectory(None, 'Select a folder where you want to store your data:',
                                                         'C:/', QFileDialog.ShowDirsOnly)
+            self.path = self.path_init
         else:
-            pass
+            self.path = self.path_init
+        print(self.path)
         self.path_raw_data = self.path + '/raw_data'
         date = time.strftime("%Y_%m_%d")
         self.path = os.path.join(self.path, date)
@@ -371,6 +414,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cam.start_acquisition()
         for i in range(1):
             self.images, self.times = self.cam.get_images()
+            while self.images == []:
+                self.images, self.times = self.cam.get_images() ## break the function if no image (due to the lauching time of the camera)
             self.cam.end_acquisition()
             self.image = self.images[0]
             self.image_reshaped = self.image.reshape(int(self.x_dim/self.bin_size),
@@ -381,19 +426,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def stream(self):
          self.timings_logfile_dict['camera'] = []
+         self.timings_logfile_dict['camera_bis'] = []
          image_processing_worker = Worker(self.processing_images)
          image_processing_worker.signals.result.connect(self.print_output)
          image_processing_worker.signals.finished.connect(self.thread_complete)
          self.threadpool.start(image_processing_worker)
-         self.timer.start(50)
+         self.timer.start(10)
 
     def stop_stream(self):
+        print('camera end signal received')
         self.acquire_images = False
 
     def processing_images(self):
         self.acquire_images = True
         self.cam.start_acquisition()
         image_acquired = 0
+        self.timings_logfile_dict['camera_bis'].append(datetime.now().timestamp())
+        self.timings_logfile_dict['camera_bis'].append((time.perf_counter() - self.perf_counter_init)*1000)
+#        self.timings_logfile_dict['camera_bis'].append(self.times_bis)
         while self.acquire_images:
             if self.acquire_images == False:
                 break
@@ -401,21 +451,21 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             #     break
             else:
                 self.images, self.times = self.cam.get_images()  ## getting the images, getting 0, 1 or >1 images
-                if self.images == []:
+                while self.images == []:
                     self.images, self.times = self.cam.get_images() ## break the function if no image (due to the lauching time of the camera)
                 self.image = self.images[0]  ## keeping only the 1st image for GUI display
                 self.image_reshaped = self.image.reshape(int(self.x_dim/self.bin_size),
                                                         int(self.y_dim/self.bin_size))  ## image needs reshaping for show
-                print(self.image_reshaped.shape)
                 print(f"Acquired {image_acquired} images")
                 image_acquired += 1
-                if self.saving_check.isChecked(): ## for saving data after end off acquisition, uses less memory if no saving
+                if self.saving_check.isChecked(): ## for saving data after end of acquisition, uses less memory if no saving
                     for j in range(len(self.images)):
                         self.image_list.append(self.images[j])
                     self.timings_logfile_dict['camera'].append(self.times)
+#        self.timings_logfile_dict['camera_bis'].append(self.times_bis)
         self.cam.end_acquisition()
         self.saving_images(self.images, self.times)
-        self.camera_signal.finished.emit()
+#        self.camera_signal.finished.emit()  ## not sure this is needed
 
     def update_plot(self):
         if self.image_reshaped == []:
@@ -433,7 +483,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.threadpool.start(save_images_worker)
             ## saving images times
             with open(self.timings_logfile_path, "w") as file:
-                file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4))
+                file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
             ## saving experiment info
             self.info_logfile_dict['roi'].append(self.roi_list)
             self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
@@ -441,7 +491,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.info_logfile_dict['fps'].append(self.internal_frame_rate)
             self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
             with open(self.info_logfile_path, "w") as file:
-                file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+                file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
 
 
     def roi(self):
@@ -465,7 +515,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def export_roi(self):
         self.info_logfile_dict['roi'].append(self.roi_list)
         with open(self.info_logfile_path, 'w') as file:
-            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
 
     def reset_roi(self):
         self.saved_ROI_image.getView().clear()
@@ -531,7 +581,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def calibration(self):
         if os.path.isfile(self.calibration_dlp_camera_matrix_path):
             print('Calibration matrix already exists, using it as reference')
-            self.calibration_dlp_camera_matrix_path = 'C:/Users/barral/Desktop/whole_optic_gui-log_implementation_and_threading/dlp/calibration_matrix.json'
+            self.calibration_dlp_camera_matrix_path = 'C:/Users/barral/Desktop/whole_optic_gui-custom_signals/dlp/calibration_matrix.json'
             with open(self.calibration_dlp_camera_matrix_path) as file:
                 self.camera_to_dlp_matrix = np.array(json.load(file))
         else:
@@ -714,12 +764,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             elif index == 2: ### display static image
                 self.dlp.set_display_mode('static')
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
 
             elif index == 3: ## display static image on on/off timer set by the user
                 worker = Worker(self.dlp_auto_control)
-                dlp_auto_control.signals.result.connect(self.print_output)
-                dlp_auto_control.signals.finished.connect(self.thread_complete)
+                self.dlp_auto_control.signals.result.connect(self.print_output)
+                self.dlp_auto_control.signals.finished.connect(self.thread_complete)
                 #dlp_auto_control.signals.progress.connect(self.progress_fn)
                 self.threadpool.start(worker)
                 self.dlp_signal.finished.emit()
@@ -731,53 +781,55 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         elif self.display_mode_combobox.currentIndex() == 1: ## internal test pattern
             if index == 0: ## Checkboard small
                 self.dlp.checkboard_small()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 1: # Black
                 self.dlp.black()
-                self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 2: ## White
                 self.dlp.white()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 3: ## Green
                 self.dlp.green()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 4: ## Blue
                 self.dlp.blue()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 5: ## Red
                 self.dlp.red()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 6: ## Vertical lines 1
                 self.dlp.horizontal_lines_1()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 7: ## Horizontal lines 1
                 self.dlp.vertical_lines_1()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 8: ## Vertical lines 2
                 self.dlp.horizontal_lines_2()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 9: ## Horizontal lines 2
                 self.dlp.vertical_lines_2()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 10: ## Diagonal lines
                 self.dlp.diagonal_lines()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 11: ## Grey Ramp Vertical
                 self.dlp.grey_ramp_vertical()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 12: ## Grey Ramp Horizontal
                 self.dlp.grey_ramp_horizontal()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
             if index == 13: ## Checkerboard Big
                 self.dlp.checkerboard_big()
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
+                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
 
         ## HDMI Video Input mode
-        elif self.display_mode_combobox.currentIndex == 2:  ## HDMI video sequence
+        elif self.display_mode_combobox.currentIndex() == 2:  ## HDMI video sequence
             if index == 0: ## Generate ROI Files and Compile Movie From Images
-                self.generate_one_image_per_roi()
+                self.generate_one_image_per_roi(self.roi_list)
+                time.sleep(5)
                 self.movie_from_images()
-            if index == 1: ## Choose HDMI Video Sequence
+            elif index == 1: ## Choose HDMI Video Sequence
+                debug_trace()
                 vlc_path = "C:/Program Files (x86)/VideoLAN/VLC/vlc.exe"
                 video_path = f"{self.path}/dlp_images/dlp_movie.avi"
                 options = "--qt-fullscreen-screennumber=1 -f"
@@ -786,7 +838,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
             if index == 0: # Choose Pattern Sequence To Load
-                debug_trace()
                 time_stim, ok = QInputDialog.getInt(self, 'Input Dialog', 'Duration of pattern exposition (in µs)')   ## time to be given in microseconds
                 image_folder = QFileDialog.getExistingDirectory(self, 'Select Image Folder where DLP images are stored')[0]
                 InputTriggerDelay = 0
@@ -798,11 +849,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.dlp.display_image_sequence(image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
 
             if index == 2: ## Generate Multiple Images with One ROI Per Image
-                self.generate_one_image_per_roi()
+                self.generate_one_image_per_roi(self.roi_list)
 
     def turn_dlp_off(self):
         self.dlp.set_display_mode('internal')
         self.dlp.black()
+        self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
+        print('dlp end signal received')
 
     def generate_one_image_per_roi(self, roi_list):
         for nb in range(len(self.roi_list)):
@@ -816,84 +869,32 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             black_image_with_ROI = np.asarray(black_image_with_ROI)
             black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix,(608,684))
             black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
-            cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped)
+            cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped_flipped)
 
     def movie_from_images(self):
+        debug_trace()
         filenames = os.listdir(f"{self.path}/dlp_images/")
-        img_array = []
+        size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
+        h, v, z = size_image.shape
+        fps = 1  ## if 100 then 1 frame last 10 ms
+        size = (h,v)
+        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'MJPG'), fps, size)
+#        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", -1, fps, size)
         for filename in filenames:
             img = cv2.imread(f"{self.path}/dlp_images/{filename}")
-            h, v, z = img.shape
-            size = (h,v)
-            img_array.append(img)
-        fps = 100  ## 1 frame last 10 ms
-        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'I420'), fps, size)
-        for i in range(len(img_array)):
-            out.write(img_array[i])
+            out.write(img)
         out.release()
-
-    def dlp_auto_control(self, dlp_on=50, dlp_off=500, dlp_sequence=1, dlp_repeat_sequence=1, dlp_interval=1):
-        for i in range(dlp_repeat_sequence):
-            for j in range(dlp_sequence):
-                ## ON
-                self.dlp.set_display_mode('static')
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
-                time.sleep(dlp_on/1000)
-                ## OFF
-                self.dlp.set_display_mode('internal')
-                self.dlp.black()
-                self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
-                time.sleep(dlp_off/1000)
-            time.sleep(dlp_interval/1000)
-        dlp_signal.finished.emit()
-
-    def dlp_auto_control(self):
-        ## getting value from gui
-        if str(self.dlp_mode_comboBox.currentText()) == 'Static image':
-            mode_index = 0 ## refer to mode_index of the function selection for the tlp
-        elif str(self.dlp_mode_comboBox.currentText()) == 'HDMI video':
-            mode_index = 2
-        elif str(self.dlp_mode_comboBox.currentText()) == 'Pattern Sequence':
-            mode_index = 3
-        dlp_on = self.dlp_time_on_lineEdit.text()
-        dlp_off = self.dlp_time_off_lineEdit.text()
-        dlp_interval = self.intervalle_between_sequences_lineEdit.text()
-        dlp_sequence = self.number_of_sequence_lineEdit.text()
-        dlp_repeat_sequence = self.number_sequence_repetition.lineEdit.text()
-
-        ## lauching auto protocol
-        for i in range(dlp_repeat_sequence):
-            for j in range(dlp_sequence):
-                ## ON
-                self.display_mode(mode_index)
-                if mode_index == 0: ## static image
-                    action_index = 2  ## display_image is 2
-                    self.choose_action(action_index)
-                if mode_index == 2:  ## hdmi video input
-                    action_index = 1 ## display hdmi video sequence is index 1
-                    self.choose_action(action_index)
-                if mode_index == 3: ## pattern sequence display
-                    action_index = 1 ## display pattern sequence is 1
-                    self.choose_action(action_index)
-                self.timings_logfile_dict['dlp']['on'].append(time.time_ns())
-                time.sleep(dlp_on/1000)
-                ## OFF
-                self.turn_dlp_off()
-                self.timings_logfile_dict['dlp']['off'].append(time.time_ns())
-                time.sleep(dlp_off/1000)
-            time.sleep(dlp_interval/1000)
-        dlp_signal.finished.emit()
 
     ####################
     ####    Laser   ####
     ####################
     def laser_on(self):
         self.laser.turn_on()
-        self.timings_logfile_dict['laser']['on'].append(time.time_ns())
+        self.timings_logfile_dict['laser']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
 
     def laser_off(self):
         self.laser.turn_off()
-        self.timings_logfile_dict['laser']['off'].append(time.time_ns())
+        self.timings_logfile_dict['laser']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
 
     ########################
     ####   Controler    ####
@@ -930,6 +931,53 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ####################
     #### Automation  ###
     ####################
+    def dlp_auto_control(self):
+        ## getting value from gui
+        if str(self.dlp_mode_comboBox.currentText()) == 'Static image':
+            mode_index = 0 ## refer to mode_index of the function selection for the tlp
+        elif str(self.dlp_mode_comboBox.currentText()) == 'HDMI video':
+            mode_index = 2
+        elif str(self.dlp_mode_comboBox.currentText()) == 'Pattern Sequence':
+            mode_index = 3
+        print(str(self.dlp_mode_comboBox.currentText()))
+        dlp_on = int(self.dlp_time_on_lineEdit.text())
+        dlp_off = int(self.dlp_time_off_lineEdit.text())
+        dlp_interval = int(self.intervalle_between_sequences_lineEdit.text())
+        dlp_sequence = int(self.number_of_sequence_lineEdit.text())
+        dlp_repeat_sequence = int(self.number_sequence_repetition_lineEdit.text())
+
+        ## lauching auto protocol
+        for i in range(dlp_repeat_sequence):
+            for j in range(dlp_sequence):
+                self.laser_on()
+                custom_sleep_function(1000)
+                if self.record_electrophysiological_trace_radioButton.isChecked():
+                    self.ephy_stim_start()
+                ## ON
+                self.display_mode(mode_index)
+                if mode_index == 0: ## static image
+                    action_index = 2  ## display_image is index 2
+                    self.choose_action(action_index)
+                if mode_index == 2:  ## hdmi video input
+                    action_index = 1 ## display hdmi video sequence is index 1
+                    self.choose_action(action_index)
+                if mode_index == 3: ## pattern sequence display
+                    action_index = 1 ## display pattern sequence is index 1
+                    self.choose_action(action_index)
+#                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
+                custom_sleep_function(dlp_on)
+                if self.record_electrophysiological_trace_radioButton.isChecked():
+                    self.ephy_stim_end()
+                self.turn_dlp_off()
+#                self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
+                custom_sleep_function(dlp_off)
+            self.laser_off()
+            custom_sleep_function(dlp_interval)
+        self.camera_signal.finished.emit()
+        self.ephy_signal.finished.emit()
+        self.dlp_signal.finished.emit()
+        self.end_experiment_function.finished.emit()
+
     def export_experiment(self):
         self.info_logfile_dict['roi'].append(self.roi_list)
         self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
@@ -937,7 +985,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.info_logfile_dict['fps'].append(self.internal_frame_rate)
         self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
         with open(self.info_logfile_path, "w") as file:
-            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4))
+            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
 
     def load_experiment(self):
         ## experiment json file
@@ -960,40 +1008,202 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cam.write_subarray_size(self.x_init, self.x_dim, self.y_init, self.y_dim)
 
     def run_experiment(self):
+#        experiment_repetition = int(self.experiment_repetition_lineEdit.text())
+#        for repeat in range(experiment_repetition):
+#            print(f"experiment repetition number {repeat}")
         self.initialize_experiment()
         dlp_worker = Worker(self.dlp_auto_control)
+        ephy_worker = Worker(self.ephy_recording_thread)
         self.stream()
-        time.sleep(.5)
-        self.laser_on()
-        time.sleep(1)
+        custom_sleep_function(2000)
         self.threadpool.start(dlp_worker)  ## in those experiment the dlp function drives the camera and laser stops
-        if self.subArray_mode_radioButton.isChecked():
-            self.recording()
+        self.recording = True
+        self.ephy_data = []
+        if self.record_electrophysiological_trace_radioButton.isChecked():
+            self.recording = True
+            self.threadpool.start(ephy_worker)
+#
+#            while not self.end_expe:
+#                time.sleep(1)
+#                QApplication.processEvents()
+
+    def end_experiment(self):
+        print('end experiment signal received')
+        self.end_expe = True
 
     ########################################
     #### Classical electrophysiology  ######
     ########################################
+    ## TO DO: need to make more dynamic
+    
+    def init_voltage(self):
+        ## reading voltage
+        self.analog_input = PyDAQmx.Task()
+        self.read = PyDAQmx.int32()
+        self.data_ephy = np.zeros((len(self.channel_number), self.sampling_rate), dtype=np.float64)
+        for channel in self.channel_number:
+            self.analog_input.CreateAIVoltageChan(f'Dev1/ai{channel}',
+                                                        "",
+                                                        PyDAQmx.DAQmx_Val_Cfg_Default,
+                                                        -10.0,
+                                                        10.0,
+                                                        PyDAQmx.DAQmx_Val_Volts,
+                                                        None)
+        self.analog_input.CfgSampClkTiming("",
+                            self.sampling_rate,  ## sampling rate
+                            PyDAQmx.DAQmx_Val_Rising,  ## active edge
+                            PyDAQmx.DAQmx_Val_FiniteSamps, ## sample mode
+                            1000) ## nb of sample to acquire
+        self.analog_input.StartTask()
+        
+        ## stimulating
+        self.analog_output = PyDAQmx.Task()
+        self.analog_output.CreateAOVoltageChan("Dev1/ao0",
+                                "",
+                                -10.0,
+                                10.0,
+                                PyDAQmx.DAQmx_Val_Volts,
+                                None)
+        self.analog_output.CfgSampClkTiming("",
+                    self.sampling_rate,  ## sampling rate
+                    PyDAQmx.DAQmx_Val_Rising,  ## active edge
+                    PyDAQmx.DAQmx_Val_ContSamps, ## sample mode
+                    1000) ## nb of sample to acquire
+#        self.analog_output.StartTask()
+        
+#        self.pulse = np.zeros(1, dtype=np.uint8)
+#        self.write_digital_lines = PyDAQmx.Task()
+#        self.write_digital_lines.CreateDOChan("/Dev1/port0/line3","",PyDAQmx.DAQmx_Val_ChanForAllLines)
+#        self.write_digital_lines.StartTask()
+        
+    def start_recording(self):
+        self.analog_input.ReadAnalogF64(self.sampling_rate,   ## number of sample per channel
+                                    10.0,  ## timeout in s
+                                    PyDAQmx.DAQmx_Val_GroupByChannel,  ## fillMode (interleave data acqcuisition or not?)
+                                    self.data_ephy,   #The array to store read data into
+                                    self.data_ephy.shape[0]*self.data_ephy.shape[1],  ## length of the data array
+                                    PyDAQmx.byref(self.read),None) ## total number of data points read per channel
+        print(f"Acquired {self.read.value} points")
+        self.analog_input.StopTask()
+        print(self.data_ephy.shape)
+        
+        self.timings_logfile_dict['ephy']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
+        return self.data_ephy
 
-    def recording(self):
-        voltage_data = self.ephy_read_voltage.recording()
-        self.save_data(voltage_data)
+    def graph_voltage(self):
+        self.x = range(self.sampling_rate)
+        self.start_recording()
+#        colors = ['g', 'r', 'c', 'm', 'y', 'k', 'w']
+#        self.voltage_plot = pg.plot(self.x, self.data_ephy[0], pen='b')
+#        if self.data_ephy.shape[0] > 1:
+#            for channel, color in zip(range(self.data_ephy.shape[0]-1), colors):
+#                    self.voltage_plot.plot(self.x, self.data_ephy[channel]+1, pen = color)
+        self.plot = pg.GraphicsWindow(title="Electrophysiology")
+        self.voltage_plot = self.plot.addPlot(title='Voltage')
 
-    def save_data(self, data):
-        np.save(file = f"{self.path}/voltage.npy", arr = data)
+        self.curve0 = self.voltage_plot.plot(self.x, self.data_ephy[0], pen='b')
+#        self.curve1 = self.voltage_plot.plot(self.x, self.data_ephy[1], pen='g')
+#        self.curve2 = self.voltage_plot.plot(self.x, self.data_ephy[2], pen='r')
+#        self.curve3 = self.voltage_plot.plot(self.x, self.data_ephy[3], pen='c')
+#        
+#        self.curve4 = self.voltage_plot.plot(self.x, self.data_ephy[4], pen='m')
+#        self.curve5 = self.voltage_plot.plot(self.x, self.data_ephy[5], pen='y')
+#        self.curve6 = self.voltage_plot.plot(self.x, self.data_ephy[6], pen='k')
+#        self.curve7 = self.voltage_plot.plot(self.x, self.data_ephy[7], pen='w')
+        
+        self.voltage_plot.addLegend()
+        self.voltage_plot.showGrid(x=True, y=True)
+        self.plot.setBackground('w')
+        pg.setConfigOptions(antialias=True)
+        self.ephy_graph = True
+        
+        self.timer_ephy = QTimer()
+        self.timer_ephy.timeout.connect(self.update_plot_ephy)
+        self.timer_ephy.start(1000)
 
-    def stim(self):
-        value = 1.3
-        self.ephy_stim.start_stimulation(value)
-        self.timings_logfile_dict['ephys']['on'] = []
+    def update_plot_ephy(self):
+        if self.ephy_graph==False:
+            self.timer_ephy.stop()
 
-        stim_length(0.5)
-        time.sleep(stim_length)
+        self.start_recording()
+#        self.voltage_plot.enableAutoRange('xy', False)
+#        colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
+#        debug_trace()
+#        for channel, color in zip(range(self.data_ephy.shape[0]), colors):
+#        for channel in range(self.data_ephy.shape[0]):
+#            self.voltage_plot.setData(1000, self.data_ephy[channel])
+#            self.voltage_plot.plot(self.x, self.data_ephy[channel], clear=True, pen=color)
+        self.curve0.setData(self.x, self.data_ephy[0])
+#        self.curve1.setData(self.x, self.data_ephy[1])
+#        self.curve2.setData(self.x, self.data_ephy[2])
+#        self.curve3.setData(self.x, self.data_ephy[3])
+#        
+#        self.curve4.setData(self.x, self.data_ephy[4])
+#        self.curve5.setData(self.x, self.data_ephy[5])
+#        self.curve6.setData(self.x, self.data_ephy[6])
+#        self.curve7.setData(self.x, self.data_ephy[7])
 
-        self.ephy_stim.end_stimulation()
-        self.timings_logfile_dict['ephys']['off'] = []
+        
+    def close_graph_windows(self):
+        print('closing ephy plot and stopping recording')
+        self.ephy_graph = False
+        self.timer_ephy.stop()
+        self.stop_recording()
+        self.plot.close()
 
-    def display_data(self, data):
-        print('not implemented yet')
+    def stop_recording(self):
+        print('ephy end signal received')
+        self.recording = False
+        self.analog_input.StopTask()
+        self.timings_logfile_dict['ephy']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
+
+    def save_ephy_data(self, data):
+#        np.save(file = f"{self.path}/voltage.npy", arr = data)
+        np.savetxt(f"{self.path}/voltage.txt", self.data_ephy)
+
+    def ephy_recording_thread(self):
+        if self.record_electrophysiological_trace_radioButton.isChecked():
+            while self.recording:
+                data = self.start_recording()
+                self.graph_voltage()
+                self.ephy_data.append(data)
+            self.save_ephy_data(self.ephy_data)
+
+    def start_stimulation(self):
+        print('stimulation start')
+#        set_voltage_value = 5.
+        self.stim_data = np.array([5]*1000)
+        self.stim_data[1:100] = 0
+        self.stim_data[900:1000] = 0
+#        self.stim_data = np.array([5])
+        n=1000
+        sampsPerChanWritten=PyDAQmx.int32()
+
+#        self.analog_output.WriteAnalogScalarF64(1, 10.0, set_voltage_value, None)
+#        self.analog_output.WriteAnalogF64(1000, 0, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.stim_data, PyDAQmx.byref(sampsPerChanWritten), None)
+        self.analog_output.WriteAnalogF64(n, 0, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.stim_data, PyDAQmx.byref(sampsPerChanWritten), None)
+        self.analog_output.StartTask()
+        
+        self.timings_logfile_dict['ephy_stim']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
+
+
+#        self.pulse[0]=1
+#        self.write_digital_lines.WriteDigitalLines(1, 1, 5.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse, None, None)
+
+    def end_stimulation(self):
+        self.analog_output.StopTask()
+        self.timings_logfile_dict['ephy_stim']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
+        print('stimulation end')
+        
+#        self.pulse[0]=0
+#        self.write_digital_lines.WriteDigitalLines(1, 1, 5.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse , None, None)
+        
+    def ephy_stim(self):
+        self.start_stimulation()
+        custom_sleep_function(2500)
+        self.end_stimulation()
+
+
 
     ####################
     #### Clean exit ####
@@ -1013,7 +1223,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 def main():
     app = QApplication(sys.argv)
     win = MainWindow()
-    win.show()
+#    win.show()
+    win.showMaximized()
+    app.exec_()
     app.exit(app.exec_())
 
 if __name__ == "__main__":

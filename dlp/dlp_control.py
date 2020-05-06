@@ -68,14 +68,25 @@ class Dlp():
 		self.dlp.setModeToHDMIVideo()
 
 	## pattern of images
-	def display_image_sequence(self, image_folder, InputTriggerDelay, AutoTriggerPeriod, ExposureTime):
+	
+	def set_pattern_sequence_setting(self, bitDepth=8, numOfPatters=2, Mode =0, InputTriggerType = 1, InputTriggerDelay = 0, AutoTriggerPeriod = 3333334, ExposureTime = 3333334, LEDSelect =1):
+		self.dlp.setPatternSeqSetting(bitDepth, 
+										numOfPatters, 
+										Mode, 
+										InputTriggerType, 
+										InputTriggerDelay, 
+										AutoTriggerPeriod, 
+										ExposureTime, 
+										LEDSelect)
+	
+	def display_image_sequence(self, image_folder ): #, InputTriggerDelay, AutoTriggerPeriod, ExposureTime):
 		patterns = os.listdir(image_folder)
-#		self.dlp.setPatternSeqSetting()
-		self.dlp.setPatternSeqSetting(bitDepth = 8, numOfPatters = len(patterns), Mode = 0,
-									InputTriggerType = 1, InputTriggerDelay = InputTriggerDelay,
-									AutoTriggerPeriod = AutoTriggerPeriod,
-									ExposureTime = ExposureTime, LEDSelect =1)
-		self.dlp.setModeToPatternSequenceDisplay()
+		self.set_pattern_sequence_setting(numOfPatters = len(patterns))
+#		self.dlp.setPatternSeqSetting(bitDepth = 8, numOfPatters = len(patterns), Mode = 0,
+#									InputTriggerType = 1, InputTriggerDelay = InputTriggerDelay,
+#									AutoTriggerPeriod = AutoTriggerPeriod,
+#									ExposureTime = ExposureTime, LEDSelect =1)
+#		self.dlp.setModeToPatternSequenceDisplay()
 
 		for pattern in patterns:
 			self.dlp.PatternDefinition(pattern, image_folder + pattern)
@@ -104,17 +115,11 @@ class Dlp():
 if __name__ == "__main__":
 	dlp = Dlp()
 	dlp.connect()
-	dlp.blue()
-	dlp.black()
+#	dlp.blue()
+#	dlp.black()
 #	dlp.disconnect()
 
 #	dlp.set_display_mode('static')
 #	dlp.display_static_image('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/ROI_warped_0.bmp')
 
-#
-##
-#	InputTriggerDelay = 0
-#	AutoTriggerPeriod = 3333334
-#	ExposureTime = 3333334
-#
-#	dlp.display_image_sequence('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/', InputTriggerDelay, AutoTriggerPeriod, ExposureTime)
+	dlp.display_image_sequence('C:/Users/barral/Desktop/2020_01_16/experiment_13/dlp_images/')
