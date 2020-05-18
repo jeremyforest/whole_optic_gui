@@ -387,7 +387,7 @@ class dm365():
 	    payload = bytearray([])
 	    header = []
 	    currentPacket = []
-	    header = bytearray(b'\x02\x04\x05\x00\x02\x00')
+	    header = bytearray(b'\x02\x04\x05\x00\x02  \x00')
 	    payload.append(int(n1))
 	    payload.append(int(n2))
 	    currentPacket = header
@@ -402,3 +402,20 @@ class dm365():
 if __name__ == "__main__":
 	dlp = dm365()
 	dlp.connect()
+
+#	dlp.setModeToPatternSequenceDisplay()
+#	dlp.setPatternSeqSetting()# For default values of ( bitDepth=8, numOfPatters=5, Mode =0, InputTriggerType = 1, InputTriggerDelay = 0, AutoTriggerPeriod = 3333334, ExposureTime = 3333334, LEDSelect =1  )
+#	dlp.setPatternSeqSetting(bitDepth=8, numOfPatters=5, Mode =0, InputTriggerType = 1, InputTriggerDelay = 0, AutoTriggerPeriod = 3333334, ExposureTime = 3333334, LEDSelect =1  )
+## # dmd.setModeToPatternSequenceDisplay()
+#
+#
+#	file1 = 'C:\Users\barral\Desktop\whole_optic_gui-custom_signals\dlp\test_images\pattern_1_01.bmp'
+#	dlp.PatternDefinition(0, file1)
+#	file2 = 'C:\Users\barral\Desktop\whole_optic_gui-custom_signals\dlp\test_images\pattern_1_02.bmp'
+#	dlp.PatternDefinition(0, file2)
+#
+#	dlp.startPatternSequence()
+#	time.sleep(30)
+#
+#	dlp.stoptPatternSequence()
+

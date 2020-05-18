@@ -68,7 +68,6 @@ class Dlp():
 		self.dlp.setModeToHDMIVideo()
 
 	## pattern of images
-	
 	def set_pattern_sequence_setting(self, bitDepth=8, numOfPatters=2, Mode =0, InputTriggerType = 1, InputTriggerDelay = 0, AutoTriggerPeriod = 3333334, ExposureTime = 3333334, LEDSelect =1):
 		self.dlp.setPatternSeqSetting(bitDepth, 
 										numOfPatters, 

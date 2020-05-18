@@ -214,7 +214,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.camera_to_dlp_matrix = []
         self.camera_distortion_matrix = []
         self.dlp_image_path = []
-        self.calibration_dlp_camera_matrix_path = 'dlp/calibration_matrix.json'
+        self.calibration_dlp_camera_matrix_path = 'dlp\\calibration_matrix.json'
         ## load calibration matrix
         self.calibration()
         self.images = []
@@ -333,7 +333,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def change_folder(self):
         self.path = QFileDialog.getExistingDirectory(None, 'Select the folder you want the path to change to:',
                                                         'C:/', QFileDialog.ShowDirsOnly)
-        self.path_raw_data = self.path + '/raw_data'
+        self.path = self.path.replace('/','\\')
+        self.path_raw_data = self.path + '\\raw_data'
         self.current_folder_label_2.setText(str(self.path))
 
     def initialize_experiment(self):
@@ -378,7 +379,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             self.path = self.path_init
         print(self.path)
-        self.path_raw_data = self.path + '/raw_data'
+        self.path_raw_data = self.path + '\\raw_data'
         date = time.strftime("%Y_%m_%d")
         self.path = os.path.join(self.path, date)
         if not os.path.exists(self.path):
@@ -389,10 +390,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             n += 1
             self.path_temp = os.path.join(self.path, 'experiment_' + str(n))
         self.path = self.path_temp
-        self.path_raw_data = self.path + '/raw_data'
+        self.path_raw_data = self.path + '\\raw_data'
         os.makedirs(self.path)
-        os.makedirs(self.path + '/dlp_images')
-        os.makedirs(self.path + '/raw_data')
+        os.makedirs(self.path + '\\dlp_images')
+        os.makedirs(self.path + '\\raw_data')
 
         ## generate log files
         self.info_logfile_path = self.path + "/experiment_{}_info.json".format(n)
@@ -418,8 +419,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.images, self.times = self.cam.get_images() ## break the function if no image (due to the lauching time of the camera)
             self.cam.end_acquisition()
             self.image = self.images[0]
-            self.image_reshaped = self.image.reshape(int(self.x_dim/self.bin_size),
-                                                    int(self.y_dim/self.bin_size))
+            self.image_reshaped = self.image.reshape(int(self.y_dim/self.bin_size),
+                                                    int(self.x_dim/self.bin_size))
             self.graphicsView.setImage(self.image_reshaped)
             image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
             self.save_as_png(self.image_reshaped, image_name)
@@ -454,8 +455,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 while self.images == []:
                     self.images, self.times = self.cam.get_images() ## break the function if no image (due to the lauching time of the camera)
                 self.image = self.images[0]  ## keeping only the 1st image for GUI display
-                self.image_reshaped = self.image.reshape(int(self.x_dim/self.bin_size),
-                                                        int(self.y_dim/self.bin_size))  ## image needs reshaping for show
+                self.image_reshaped = self.image.reshape(int((self.y_dim/self.bin_size)),
+                                                        int(self.x_dim/self.bin_size))  ## image needs reshaping for show
                 print(f"Acquired {image_acquired} images")
                 image_acquired += 1
                 if self.saving_check.isChecked(): ## for saving data after end of acquisition, uses less memory if no saving
@@ -607,7 +608,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.cam.start_acquisition()
             time.sleep(1)
             for i in range(1):
-                camera_image = self.cam.get_images()[0][0].reshape(self.x_dim,self.y_dim).T
+                camera_image = self.cam.get_images()[0][0].reshape(self.x_dim,self.y_dim).T ##\ do I need to invert the dim here ? 
             self.cam.end_acquisition()
             # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
             # camera_image = Image.open(camera_image_path)
@@ -829,11 +830,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 time.sleep(5)
                 self.movie_from_images()
             elif index == 1: ## Choose HDMI Video Sequence
-                debug_trace()
-                vlc_path = "C:/Program Files (x86)/VideoLAN/VLC/vlc.exe"
-                video_path = f"{self.path}/dlp_images/dlp_movie.avi"
-                options = "--qt-fullscreen-screennumber=1 -f"
-                subprocess.call([vlc_path, options, video_path])
+                vlc_path = "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"
+                video_path = f"{self.path}\\dlp_images\\dlp_movie.avi"
+                ## is the screen number working ? neede to test with dlp screen. shouhld work if dlp is screen 1
+                subprocess.call([vlc_path, '--play-and-exit', '-f', '--qt-fullscreen-screennumber=1', video_path], shell=False)
 
         ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
@@ -872,15 +872,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped_flipped)
 
     def movie_from_images(self):
-        debug_trace()
         filenames = os.listdir(f"{self.path}/dlp_images/")
         size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
         h, v, z = size_image.shape
-        fps = 1  ## if 100 then 1 frame last 10 ms
-        size = (h,v)
-        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'MJPG'), fps, size)
-#        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", -1, fps, size)
+        fps = 100  ## if 100 then 1 frame last 10 ms
+        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'MJPG'), fps, (v,h))  #MJPG
+#        out = cv2.VideoWriter(f"{path}/dlp_images/dlp_movie.avi", -1, fps, size)
         for filename in filenames:
+            print(f'writing image {filename} in video')
             img = cv2.imread(f"{self.path}/dlp_images/{filename}")
             out.write(img)
         out.release()
