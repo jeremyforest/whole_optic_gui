@@ -1,12 +1,14 @@
 # whole_optic_gui
 
 
-GUI to control the microscopy setup in the lab.
-================================================
+GUI to control the hardware setup in the Reyes lab at NYU. ================================================
+
+This software allows for the control of a whole optical electrophysiology hardware based on voltage-sensitive-dye-indicator and optogenetic stimulation. The hardware involved a microscope, its controler, a laser, a dlp and a camera.
+
 
 **Changelog (brief):**
 
-**Version 0.3 \** \
+**Version 0.3** \
 Logging, threading, more bug fixes
 * Implemented dlp, laser, camera image timing data logging for hardware synchronization and averaging of traces
 * Implemented threading for DLP and camera controls
@@ -17,7 +19,7 @@ Logging, threading, more bug fixes
 * Started implementing signals for global synchronization
 * Fixed camera acquisition not working properly for custom FOV being non-square images
 * Started woking on dlp hdmi implementation
-* minimally working implementation of classical electrophysiology system
+* Minimally working implementation of classical electrophysiology system
 
 Version 0.2.2 \
 More bug fixes
