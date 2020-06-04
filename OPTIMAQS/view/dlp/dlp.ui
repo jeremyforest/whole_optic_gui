@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>dlp_widget</class>
+ <widget class="QWidget" name="dlp_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>780</width>
+    <height>553</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <widget class="QFrame" name="dlp">
+     <property name="minimumSize">
+      <size>
+       <width>450</width>
+       <height>350</height>
+      </size>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_5">
+      <item row="0" column="1">
+       <widget class="QPushButton" name="calibration_button">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Calibrate the DLP/Camera images with their respective resolutions so that ROI designed from the camera interface can be projected with the DLP &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="text">
+         <string>New Calibration</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0" colspan="2">
+       <widget class="QComboBox" name="display_mode_subbox_combobox"/>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="dlp_label">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <italic>false</italic>
+          <bold>true</bold>
+          <underline>true</underline>
+          <kerning>true</kerning>
+         </font>
+        </property>
+        <property name="text">
+         <string>DLP</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" colspan="2">
+       <widget class="QComboBox" name="display_mode_combobox">
+        <item>
+         <property name="text">
+          <string>Static Image</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Internal Test Pattern</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>HDMI Video Input</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>Pattern Sequence Display</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="4" column="0" rowspan="2" colspan="2">
+       <widget class="QGraphicsView" name="dlp_projection_view"/>
+      </item>
+      <item row="1" column="0" colspan="2">
+       <widget class="QLabel" name="display_mode_label">
+        <property name="text">
+         <string>Current Display Mode</string>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -8,7 +8,12 @@ This software allows for the control of a whole optical electrophysiology hardwa
 
 **Changelog (brief):**
 
-**Version 0.3** \
+Version 0.4 \
+* Full refactorisation following MVC pattern
+* Added licence, manifest, requirement setup files for packaging and pypi release
+* 
+
+Version 0.3 \
 Logging, threading, more bug fixes
 * Implemented dlp, laser, camera image timing data logging for hardware synchronization and averaging of traces
 * Implemented threading for DLP and camera controls

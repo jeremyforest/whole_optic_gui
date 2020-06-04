@@ -1,0 +1,7 @@
+numpy==1.18.1
+pyqtgraph==0.10.0
+matplotlib==3.2.1
+Pillow==7.1.2
+PyDAQmx==1.4.3
+PyQt5==5.15.0
+pyserial==3.4
