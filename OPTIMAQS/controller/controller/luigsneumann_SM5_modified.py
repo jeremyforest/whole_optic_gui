@@ -235,16 +235,17 @@ class LuigsNeumann_SM5(SerialDevice):
             res = int(binascii.hexlify(struct.unpack('s', res[6])[0])[1])
 
 if __name__ == '__main__':
-    sm5 = LuigsNeumann_SM5('COM3')
+    sm5 = LuigsNeumann_SM5('COM4')
 
-    """
-    print 'getting positions:'
+    
+    print ('getting positions:')
 
     for ax in range(1, 9):
-       print ax, sm5.position(axis=ax)
+       print(ax, sm5.position(axis=ax))
 
     time.sleep(2)
-
+    
+    """
     print 'moving first manipulator (3 axes)'
     sm5.relative_move_group([50, 50, 50], [1, 2, 3])
 

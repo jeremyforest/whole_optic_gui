@@ -1,5 +1,5 @@
+from PyQt5.QtWidgets import QApplication
 import time
-
 
 def custom_sleep_function(ms):
     c = time.perf_counter()

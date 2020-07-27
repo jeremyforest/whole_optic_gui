@@ -965,24 +965,24 @@ if (__name__ == "__main__"):
         # print(hcam.setPropertyValue("defect_correct_mode", 1))
         print("camera 0 model:", hcam.getModelInfo(0))
 
-         # List support properties.
-#         if False:
-#             print("Supported properties:")
-#             props = hcam.getProperties()
-#             for i, id_name in enumerate(sorted(props.keys())):
-#                 [p_value, p_type] = hcam.getPropertyValue(id_name)
-#                 p_rw = hcam.getPropertyRW(id_name)
-#                 read_write = ""
-#                 if (p_rw[0]):
-#                     read_write += "read"
-#                 if (p_rw[1]):
-#                     read_write += ", write"
-#                 print("  ", i, ")", id_name, " = ", p_value, " type is:", p_type, ",", read_write)
-#                 text_values = hcam.getPropertyText(id_name)
-#                 if (len(text_values) > 0):
-#                     print("          option / value")
-#                     for key in sorted(text_values, key = text_values.get):
-#                         print("         ", key, "/", text_values[key])
+#          List support properties.
+    if True:
+        print("Supported properties:")
+        props = hcam.getProperties()
+        for i, id_name in enumerate(sorted(props.keys())):
+            [p_value, p_type] = hcam.getPropertyValue(id_name)
+            p_rw = hcam.getPropertyRW(id_name)
+            read_write = ""
+            if (p_rw[0]):
+                read_write += "read"
+            if (p_rw[1]):
+                read_write += ", write"
+            print("  ", i, ")", id_name, " = ", p_value, " type is:", p_type, ",", read_write)
+            text_values = hcam.getPropertyText(id_name)
+            if (len(text_values) > 0):
+                print("          option / value")
+                for key in sorted(text_values, key = text_values.get):
+                    print("         ", key, "/", text_values[key])
 
 #         # Test setting & getting some parameters.
 #         if False:
@@ -1024,7 +1024,7 @@ if (__name__ == "__main__"):
              print("Testing run till abort acquisition")
              hcam.startAcquisition()
              cnt = 0
-             for i in range(2000):
+             for i in range(100):
                  [frames, dims, timing] = hcam.getFrames()
                  timings.append(timing)
                  print(frames, dims, timing)

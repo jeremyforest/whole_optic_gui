@@ -1,4 +1,4 @@
-from OPTIMAQS.controller.laser.laser_interface import Laser
+from OPTIMAQS.controller.laser.laser_controller import Laser
 
 class CrystalLaser():
 	"""

@@ -1,5 +1,9 @@
 from PyQt5.QtCore import pyqtSlot, QRunnable
 import pyqtgraph
+import traceback
+import sys
+
+from OPTIMAQS.utils.signals import Signals
 
 class Worker(QRunnable):
     '''

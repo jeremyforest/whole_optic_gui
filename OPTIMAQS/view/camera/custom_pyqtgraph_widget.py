@@ -6,10 +6,8 @@ Adapted from: https://stackoverflow.com/questions/45872255/embed-a-pyqtgraph-plo
 
 """
 
-import sys
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
-import numpy as np
+from pyqtgraph.Qt import QtGui
 
 class Custom_pyqtgraph_widget(pg.ImageWindow):
     """

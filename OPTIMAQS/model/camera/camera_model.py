@@ -4,14 +4,8 @@
 Script to control the hamamatsu camera orca v4 (ref: C13440-20CU) via the DCAM API on windows.
 
 """
-
-import ctypes
-import numpy as np
-import matplotlib.pyplot as plt
-import os
 import time
-
-from OPTIMAQS.controller.camera.hamamatsu_camera import HamamatsuCamera
+from OPTIMAQS.controller.camera.hamamatsu_camera import *
 
 class MainCamera():
     def __init__(self):
@@ -75,9 +69,7 @@ class MainCamera():
         return images, times
 
     def get_internal_frame_rate(self):
-        frame_rate = self.hcam.getPropertyValue("internal_frame_rate")[0]
-        return frame_rate
-
+        return self.hcam.getPropertyValue("internal_frame_rate")[0]
 
 
 
@@ -85,8 +77,22 @@ class MainCamera():
 if (__name__ == "__main__"):
     cam = MainCamera()
     print("camera 0 model:", cam.hcam.getModelInfo(0))
-#    cam.hcam.getPropertyValue("exposure_time")
-#    cam.read_exposure()
+    print(cam.getPropertyValue("exposure_time"))
+    print(cam.read_exposure())
+    print(cam.get_subarray_size)
+    print(cam.get_internal_frame_rate)
+    
+    cam.start_acquisition()
+    nb = 0
+    start_time = time.time()
+    for i in range(100):
+        [frames, times] = cam.get_images()
+        nb += 1
+        print(frames)
+    end_time = time.time()
+    cam.end_acquisition()
+    print('FPS is ' + str(nb/(end_time-start_time)))
+    
 
 
 """

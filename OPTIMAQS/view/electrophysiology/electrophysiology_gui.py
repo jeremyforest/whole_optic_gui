@@ -6,8 +6,16 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout,
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
 import pyqtgraph as pg
-import sys
 
+## general imports
+import sys
+import PyDAQmx
+import numpy as np
+import time
+
+## Custom imports
+from OPTIMAQS.utils.json_functions import jsonFunctions
+from OPTIMAQS.utils.signals import Signals
 
 
 class ElectrophysiologyGui(QWidget):
@@ -19,18 +27,31 @@ class ElectrophysiologyGui(QWidget):
         self.initialize_electrophysiology_parameters()
         self.actions()
 
+        ## paths and timings
+        self.path = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
+        self.timings_logfile_path = self.path + '/experiment_' + self.path[-1] + '_timings.json'
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['ephy'] = {}
+        self.timings_logfile_dict['ephy']['on'] = []
+        self.timings_logfile_dict['ephy']['off'] = []
+        self.timings_logfile_dict['ephy_stim'] = {}
+        self.timings_logfile_dict['ephy_stim']['on'] = []
+        self.timings_logfile_dict['ephy_stim']['off'] = []
 
+        ## ephys data
         self.ephy_data = []
         self.end_expe = False
         self.channel_number = [2,6,10,14,16,18,20,22]
         self.sampling_rate = 1000
 
+        ## timings
+        self.perf_counter_init = jsonFunctions.open_json('OPTIMAQS/config_files/perf_counter_init.json')
+
     def import_electrophysiology_model(self):
         """
         import laser model-type script
         """
-        import PyDAQmx
-        from model.electrophysiology.electrophysiology import StimVoltage, ReadingVoltage
+        from OPTIMAQS.model.electrophysiology.electrophysiology import StimVoltage, ReadingVoltage
 
     def initialize_electrophysiology_parameters(self):
         """

@@ -1,5 +1,4 @@
 from PyQt5.QtCore import pyqtSignal, QObject
-import pyqtgraph
 
 class Signals(QObject):
     '''

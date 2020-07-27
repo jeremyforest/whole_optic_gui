@@ -5,7 +5,7 @@ a device that communicates through the serial port.
 from device import Device
 import serial
 import ctypes
-# from serial.tools import list_ports
+from serial.tools import list_ports
 
 __all__ = ['SerialDevice']
 

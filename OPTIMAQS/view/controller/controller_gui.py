@@ -17,7 +17,7 @@ class ControllerGui(QWidget):
         self.show()
         self.import_controller_model()
         self.initialize_controller_parameters()
-        self.ations()
+        self.actions()
 
 
     def import_controller_model(self):

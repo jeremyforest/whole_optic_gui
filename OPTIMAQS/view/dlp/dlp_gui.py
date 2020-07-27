@@ -7,32 +7,70 @@ from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
 import pyqtgraph as pg
 
-
+## general imports
+import os
+import numpy as np
+import json
+import time
+from PIL import Image, ImageDraw, ImageOps
+import cv2
+import subprocess
 
 ## Custom imports
 from OPTIMAQS.utils.signals import Signals
+from OPTIMAQS.utils.json_functions import jsonFunctions
+from OPTIMAQS.utils.worker import Worker
+
 
 class DLPGui(QWidget):
     def __init__(self):
+        """
+        GUI for the Digital Light Processor / Digital Micromirror Device
+        """
         super(DLPGui, self).__init__()
-        uic.loadUi('OPTIMAQS/view/dlp/dlp.ui', self)
-        self.show()
-        self.import_dlp_model()
-        self.initialize_dlp_parameters()
-        self.calibration()
-
+       
+        ### GUI related
+        self.dlp_ui = uic.loadUi('OPTIMAQS/view/dlp/dlp.ui', self)
+        self.dlp_ui.show()
+        
         self.camera_to_dlp_matrix = []
         self.camera_distortion_matrix = []
         self.dlp_image_path = []
-        self.calibration_dlp_camera_matrix_path = 'view\\dlp\\calibration_matrix.json'
+        self.path = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
+
+        
+        ## initialize dlp
+        self.import_dlp_model()
+        self.actions()
+        self.initialize_dlp_parameters()
+        self.calibration_dlp_camera_matrix_path = 'C:\\Users\\barral\\Desktop\\whole_optic_gui-refactoring\\OPTIMAQS\\view\\dlp\\calibration_matrix.json'
+        self.calibration()
+        
+        ## JSON files
+        self.info_logfile_path = self.path + '/experiment_' + self.path[-1] + '_info.json'
+        self.info_logfile_dict = {}
+        self.info_logfile_dict['roi'] = []
+        
+        self.timings_logfile_path = self.path + '/experiment_' + self.path  [-1] + '_timings.json'
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['dlp'] = {}
+        self.timings_logfile_dict['dlp']['on'] = []
+        self.timings_logfile_dict['dlp']['off'] = []
+
+        ## timings
+        self.perf_counter_init = jsonFunctions.open_json('OPTIMAQS/config_files/perf_counter_init.json')
+
 
     def import_dlp_model(self):
         """
         import dlp model-type script
         """
-        from model.dlp.dlp_control import Dlp
-        self.dlp = Dlp()
-        self.dlp.connect()
+        try:
+            from OPTIMAQS.model.dlp.dlp_control import Dlp
+            self.dlp = Dlp()
+            self.dlp.connect()
+        except:
+            print('cannot import dlp model')
 
     def initialize_dlp_parameters(self):
         """
@@ -46,13 +84,6 @@ class DLPGui(QWidget):
         """
         Define actions for buttons and items.
         """
-        ## ROI
-        self.save_ROI_button.clicked.connect(self.roi)
-        self.reset_ROI_button.clicked.connect(self.reset_roi)
-        self.saved_ROI_image.ui.histogram.hide()
-        self.saved_ROI_image.ui.roiBtn.hide()
-        self.saved_ROI_image.ui.menuBtn.hide()
-        self.export_ROI_button.clicked.connect(self.export_roi)
         ## DLP control
         self.display_mode_combobox.activated.connect(self.display_mode)
         self.display_mode_subbox_combobox.activated.connect(self.choose_action)
@@ -61,7 +92,6 @@ class DLPGui(QWidget):
     def calibration(self):
         if os.path.isfile(self.calibration_dlp_camera_matrix_path):
             print('Calibration matrix already exists, using it as reference')
-            self.calibration_dlp_camera_matrix_path = 'C:/Users/barral/Desktop/whole_optic_gui-custom_signals/dlp/calibration_matrix.json'
             with open(self.calibration_dlp_camera_matrix_path) as file:
                 self.camera_to_dlp_matrix = np.array(json.load(file))
         else:
@@ -165,7 +195,7 @@ class DLPGui(QWidget):
 
         return self.camera_to_dlp_matrix
 
-    def display_mode(self, index):
+    def display_mode(self, index):  ## can this be implemented in QDesigner ?
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
             self.dlp.set_display_mode('static')
@@ -221,12 +251,14 @@ class DLPGui(QWidget):
                     # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
 
             elif index == 1:  ##generate static image from ROI
+                self.info_logfile_dict = jsonFunctions.open_json(self.info_logfile_path)
+                self.roi_list = self.info_logfile_dict['roi']
                 black_image = Image.new('1', (2048,2048), color=0) ## 2048 because we want the full fov
                 black_image_with_ROI = black_image
                 for nb in range(len(self.roi_list)):
-                    x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
-                    x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0],
-                                self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
+                    x0, y0 = (self.roi_list[nb][0]['pos'][0], self.roi_list[nb][0]['pos'][1])
+                    x1, y1 = (self.roi_list[nb][0]['pos'][0] + self.roi_list[nb][0]['size'][0],
+                                self.roi_list[nb][0]['pos'][1] + self.roi_list[nb][0]['size'][1])
                     draw = ImageDraw.Draw(black_image_with_ROI)
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
@@ -304,6 +336,7 @@ class DLPGui(QWidget):
 
         ## HDMI Video Input mode
         elif self.display_mode_combobox.currentIndex() == 2:  ## HDMI video sequence
+            self.roi_list = self.info_logfile_dict['roi']
             if index == 0: ## Generate ROI Files and Compile Movie From Images
                 self.generate_one_image_per_roi(self.roi_list)
                 time.sleep(5)
@@ -362,6 +395,9 @@ class DLPGui(QWidget):
             img = cv2.imread(f"{self.path}/dlp_images/{filename}")
             out.write(img)
         out.release()
+
+    def turn_off(self):
+        self.dlp.disconnect()
 
 
 

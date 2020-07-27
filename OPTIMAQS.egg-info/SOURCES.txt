@@ -1,9 +1,6 @@
-MANIFEST.in
 README.md
-setup.cfg
 setup.py
 OPTIMAQS/__init__.py
-OPTIMAQS/custom_pyqtgraph_widget.py
 OPTIMAQS.egg-info/PKG-INFO
 OPTIMAQS.egg-info/SOURCES.txt
 OPTIMAQS.egg-info/dependency_links.txt
@@ -38,6 +35,7 @@ OPTIMAQS/model/laser/laser_model.py
 OPTIMAQS/utils/__init__.py
 OPTIMAQS/utils/custom_sleep_function.py
 OPTIMAQS/utils/debug.py
+OPTIMAQS/utils/json_functions.py
 OPTIMAQS/utils/signals.py
 OPTIMAQS/utils/worker.py
 OPTIMAQS/view/__init__.py

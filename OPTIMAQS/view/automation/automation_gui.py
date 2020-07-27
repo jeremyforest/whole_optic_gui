@@ -1,23 +1,49 @@
 ## PyQT5
 from PyQt5 import uic
-from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, pyqtSignal, QThreadPool, QObject, QTimer, QEventLoop
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget, QSlider, QFileDialog, \
-                            QMessageBox, QProgressBar, QGraphicsScene, QInputDialog, QDialog
+from PyQt5.QtCore import Qt, QRunnable, pyqtSlot, pyqtSignal, QThreadPool,  \
+                         QObject, QTimer, QEventLoop
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, \
+                            QVBoxLayout, QWidget, QSlider, QFileDialog, \
+                            QMessageBox, QProgressBar, QGraphicsScene, \
+                            QInputDialog, QDialog
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
-import pyqtgraph as pg
+
+## General packages
 import sys
 
+## Custome imports
 from OPTIMAQS.utils.signals import Signals
+from OPTIMAQS.utils.worker import Worker
+from OPTIMAQS.utils.custom_sleep_function import custom_sleep_function
+from OPTIMAQS.utils.json_functions import jsonFunctions
+
+### View model imports
+from OPTIMAQS.view.camera.camera_gui import CameraGui
+from OPTIMAQS.view.dlp.dlp_gui import DLPGui
+from OPTIMAQS.view.laser.laser_gui import LaserGui
+from OPTIMAQS.view.controller.controller_gui import ControllerGui
+from OPTIMAQS.view.electrophysiology.electrophysiology_gui import ElectrophysiologyGui
 
 
 class AutomationGui(QWidget):
     def __init__(self):
         super(AutomationGui, self).__init__()
-        uic.loadUi('OPTIMAQS/view/automation/automation.ui', self)
-        self.show()
+        self.automation_ui = uic.loadUi('OPTIMAQS/view/automation/automation.ui', self)
+        self.automation_ui.show()
+        
         self.actions()
+        self.threadpool = QThreadPool()
+        
+        self.path = jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
+        self.path_experiment = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
 
+        ## can there be a better way than having automation on top of main ?
+        self.dlp_gui = DLPGui()
+        self.camera_gui = CameraGui()
+        self.laser_gui = LaserGui()
+#        self.controller_gui = ControllerGui
+#        self.electrophysiology_gui = ElectrophysiologyGui()
 
     def actions(self):
         """
@@ -31,9 +57,9 @@ class AutomationGui(QWidget):
 
 
     def dlp_auto_control(self):
-        ## getting value from gui
+        ## getting values from automation gui
         if str(self.dlp_mode_comboBox.currentText()) == 'Static image':
-            mode_index = 0 ## refer to mode_index of the function selection for the tlp
+            mode_index = 0 ## refer to mode_index of the function selection for the dlp
         elif str(self.dlp_mode_comboBox.currentText()) == 'HDMI video':
             mode_index = 2
         elif str(self.dlp_mode_comboBox.currentText()) == 'Pattern Sequence':
@@ -48,34 +74,34 @@ class AutomationGui(QWidget):
         ## lauching auto protocol
         for i in range(dlp_repeat_sequence):
             for j in range(dlp_sequence):
-                self.laser_on()
+#                self.laser_on()
                 custom_sleep_function(1000)
-                if self.record_electrophysiological_trace_radioButton.isChecked():
-                    self.ephy_stim_start()
+#                if self.electrophysiology_gui.record_electrophysiological_trace_radioButton.isChecked():
+#                    self.electrophysiology_gui.ephy_stim_start()
                 ## ON
-                self.display_mode(mode_index)
+                self.dlp_gui.display_mode(mode_index)
                 if mode_index == 0: ## static image
                     action_index = 2  ## display_image is index 2
-                    self.choose_action(action_index)
+                    self.dlp_gui.choose_action(action_index)
                 if mode_index == 2:  ## hdmi video input
                     action_index = 1 ## display hdmi video sequence is index 1
-                    self.choose_action(action_index)
+                    self.dlp_gui.choose_action(action_index)
                 if mode_index == 3: ## pattern sequence display
                     action_index = 1 ## display pattern sequence is index 1
-                    self.choose_action(action_index)
+                    self.dlp_gui.choose_action(action_index)
 #                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
                 custom_sleep_function(dlp_on)
-                if self.record_electrophysiological_trace_radioButton.isChecked():
-                    self.ephy_stim_end()
-                self.turn_dlp_off()
+#                if self.record_electrophysiological_trace_radioButton.isChecked():
+#                    self.ephy_stim_end()
+                self.dlp_gui.turn_dlp_off()
 #                self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
                 custom_sleep_function(dlp_off)
-            self.laser_off()
+#            self.laser_off()
             custom_sleep_function(dlp_interval)
-        self.camera_signal.finished.emit()
-        self.ephy_signal.finished.emit()
-        self.dlp_signal.finished.emit()
-        self.end_experiment_function.finished.emit()
+        self.camera_gui.camera_signal.finished.emit()
+#        self.ephy_signal.finished.emit()
+        self.dlp_gui.dlp_signal.finished.emit()
+#        self.end_experiment_function.finished.emit()
 
     def export_experiment(self):
         self.info_logfile_dict['roi'].append(self.roi_list)
@@ -83,8 +109,9 @@ class AutomationGui(QWidget):
         self.info_logfile_dict['binning'].append(self.bin_size)
         self.info_logfile_dict['fps'].append(self.internal_frame_rate)
         self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
-        with open(self.info_logfile_path, "w") as file:
-            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
+        jsonFunctions.write_to_json(self.info_logfile_dict, self.info_logfile_path)
+#        with open(self.info_logfile_path, "w") as file:
+#            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
 
     def load_experiment(self):
         ## experiment json file
@@ -94,8 +121,9 @@ class AutomationGui(QWidget):
                                                         'C:/',"Experiment file (*.json)")[0]
         # experiment_path = '/media/jeremy/Data/Data_Jeremy/2019_10_29/experiment_1/experiment_1_info.json'
         ## load/write camera related stuff
-        with open(experiment_path) as file:
-            self.info_logfile_dict = dict(json.load(file))
+#        with open(experiment_path) as file:
+#            self.info_logfile_dict = dict(json.load(file))
+        self.info_logfile_dict = jsonFunctions.open_json(self.path)
         self.roi_list = self.info_logfile_dict['roi'][0]
         self.cam.write_exposure(self.info_logfile_dict['exposure time'][0])
         self.cam.write_binning(self.info_logfile_dict['binning'][0])
@@ -110,17 +138,17 @@ class AutomationGui(QWidget):
 #        experiment_repetition = int(self.experiment_repetition_lineEdit.text())
 #        for repeat in range(experiment_repetition):
 #            print(f"experiment repetition number {repeat}")
-        self.initialize_experiment()
+#        self.initialize_experiment()
         dlp_worker = Worker(self.dlp_auto_control)
-        ephy_worker = Worker(self.ephy_recording_thread)
-        self.stream()
+#        ephy_worker = Worker(self.ephy_recording_thread)
+        self.camera_gui.stream()
         custom_sleep_function(2000)
         self.threadpool.start(dlp_worker)  ## in those experiment the dlp function drives the camera and laser stops
         self.recording = True
         self.ephy_data = []
-        if self.record_electrophysiological_trace_radioButton.isChecked():
-            self.recording = True
-            self.threadpool.start(ephy_worker)
+#        if self.record_electrophysiological_trace_radioButton.isChecked():
+#            self.recording = True
+#            self.threadpool.start(ephy_worker)
 #
 #            while not self.end_expe:
 #                time.sleep(1)

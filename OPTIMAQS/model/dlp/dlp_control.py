@@ -6,8 +6,6 @@ Created on Mon Jun 17 21:46:50 2019
 from OPTIMAQS.controller.dlp.dm365 import dm365
 import os
 import time
-import pdb
-
 
 class Dlp():
 	def __init__(self):
@@ -78,7 +76,7 @@ class Dlp():
 										ExposureTime,
 										LEDSelect)
 
-	def display_image_sequence(self, image_folder ): #, InputTriggerDelay, AutoTriggerPeriod, ExposureTime):
+	def display_image_sequence(self, image_folder): #, InputTriggerDelay, AutoTriggerPeriod, ExposureTime):
 		patterns = os.listdir(image_folder)
 		self.set_pattern_sequence_setting(numOfPatters = len(patterns))
 #		self.dlp.setPatternSeqSetting(bitDepth = 8, numOfPatters = len(patterns), Mode = 0,
@@ -121,4 +119,4 @@ if __name__ == "__main__":
 #	dlp.set_display_mode('static')
 #	dlp.display_static_image('C:/Users/barral/Desktop/2019_11_12/experiment_10/dlp_images/ROI_warped_0.bmp')
 
-	dlp.display_image_sequence('C:/Users/barral/Desktop/2020_01_16/experiment_13/dlp_images/')
+#	dlp.display_image_sequence('C:/Users/barral/Desktop/2020_01_16/experiment_13/dlp_images/')

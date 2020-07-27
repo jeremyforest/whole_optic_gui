@@ -8,6 +8,12 @@ from PyQt5.QtTest import QTest
 import pyqtgraph as pg
 import sys
 
+## general import
+import time
+
+## custom import
+from OPTIMAQS.utils.json_functions import jsonFunctions
+from OPTIMAQS.utils.signals import Signals
 
 
 class LaserGui(QWidget):
@@ -18,13 +24,23 @@ class LaserGui(QWidget):
         self.import_laser_model()
         self.initialize_laser_parameters()
         self.actions()
+        
+        self.path = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
+        self.timings_logfile_path = self.path + '/experiment_' + self.path[-1] + '_timings.json'
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['laser'] = {}
+        self.timings_logfile_dict['laser']['on'] = []
+        self.timings_logfile_dict['laser']['off'] = []
+
+        ## timings
+        self.perf_counter_init = jsonFunctions.open_json('OPTIMAQS/config_files/perf_counter_init.json')
 
 
     def import_laser_model(self):
         """
         import laser model-type script
         """
-        from model.laser.laser_control import CrystalLaser
+        from OPTIMAQS.model.laser.laser_model import CrystalLaser
         self.laser = CrystalLaser()
         self.laser.connect()
 

@@ -7,10 +7,17 @@ from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
 import pyqtgraph as pg
 import sys
-
+from datetime import datetime
+import matplotlib.pyplot as plt
+import time
+import json
+import numpy as np
+import os
 
 ## Custom imports
 from OPTIMAQS.utils.signals import Signals
+from OPTIMAQS.utils.worker import Worker
+from OPTIMAQS.utils.json_functions import jsonFunctions
 
 # import sys
 # sys.path.append('../../')
@@ -23,28 +30,55 @@ class CameraGui(QWidget):
         """
         Initialize the ui and load the camera functions
         """
-        super(CameraGui, self).__init__()
-        uic.loadUi('OPTIMAQS/view/camera/camera.ui', self)
-        self.show()
-        self.import_camera_model()
-        self.actions()
+        super().__init__()
+        
+        ## GUI related
+        self.camera_ui = uic.loadUi('OPTIMAQS/view/camera/camera.ui', self)
+        self.camera_ui.show()
 
+        self.import_camera_model()
+        self.initialize_camera_parameters()
+        self.actions()
+        self.threadpool = QThreadPool()
+
+        self.path_raw_data = jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
+        self.path_experiment = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
         self.save_images = False
         self.simulated = False
         self.images = []
         self.image_list = []
         self.image_reshaped = []
         self.roi_list = []
+        self.times_bis=[]
 
+        ## timings
+        self.perf_counter_init = jsonFunctions.open_json('OPTIMAQS/config_files/perf_counter_init.json')
 
+        #import camera related log variables. Another way to do that ? 
+        self.info_logfile_path = self.path_experiment + '/experiment_' + self.path_experiment[-1] + '_info.json'
+        self.info_logfile_dict = {}
+        self.info_logfile_dict['roi'] = []
+        self.info_logfile_dict['exposure time'] = []
+        self.info_logfile_dict['binning'] = []
+        self.info_logfile_dict['fov'] = []
+        self.info_logfile_dict['fps'] = []
+        self.timings_logfile_path = self.path_experiment + '/experiment_' + self.path_experiment[-1] + '_timings.json'
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['camera'] = []
+        self.timings_logfile_dict['camera_bis'] = []
 
+        ## UI stuff
+#        self.actionQuit.triggered.connect(self.close)
 
     def import_camera_model(self):
         """
         import camera model-type script
         """
-        from model.camera.camera_model import MainCamera
-        self.cam = MainCamera()
+        try:
+            from OPTIMAQS.model.camera.camera_model import MainCamera
+            self.cam = MainCamera()
+        except:
+            print('cannot import camera_model')
 
     def initialize_camera_parameters(self):
         """
@@ -66,9 +100,9 @@ class CameraGui(QWidget):
         self.internal_frame_rate_label.setText(str(self.internal_frame_rate))
         ## set property as wanted
         self.cam.hcam.setPropertyValue('defect_correct_mode', 1)  ## necessary ?
-        print(self.cam.hcam.getPropertyValue('defect_correct_mode'))
+        print(self.cam.hcam.getPropertyValue('defect_correct_mode')) ## necessary ?
         self.cam.hcam.setPropertyValue('hot_pixel_correct_level', 2)   ## necessary ?
-        print(self.cam.hcam.getPropertyValue('hot_pixel_correct_level'))
+        print(self.cam.hcam.getPropertyValue('hot_pixel_correct_level')) ## necessary ?
         ## custom signals
         self.camera_signal = Signals()
         self.camera_signal.start.connect(self.stream)
@@ -88,6 +122,14 @@ class CameraGui(QWidget):
         self.stop_stream_button.clicked.connect(self.stop_stream)
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plot)
+
+        ## ROI
+        self.save_ROI_button.clicked.connect(self.roi)
+        self.reset_ROI_button.clicked.connect(self.reset_roi)
+        self.saved_ROI_image.ui.histogram.hide()
+        self.saved_ROI_image.ui.roiBtn.hide()
+        self.saved_ROI_image.ui.menuBtn.hide()
+        self.export_ROI_button.clicked.connect(self.export_roi)
 
     def save_as_png(self, array, image_name):
         plt.imsave('{}{}.png'.format(self.path, image_name), array, cmap='gray')
@@ -110,8 +152,8 @@ class CameraGui(QWidget):
          self.timings_logfile_dict['camera'] = []
          self.timings_logfile_dict['camera_bis'] = []
          image_processing_worker = Worker(self.processing_images)
-         image_processing_worker.signals.result.connect(self.print_output)
-         image_processing_worker.signals.finished.connect(self.thread_complete)
+         image_processing_worker.signals.result.connect(image_processing_worker.print_output)
+         image_processing_worker.signals.finished.connect(image_processing_worker.thread_complete)
          self.threadpool.start(image_processing_worker)
          self.timer.start(10)
 
@@ -125,12 +167,10 @@ class CameraGui(QWidget):
         image_acquired = 0
         self.timings_logfile_dict['camera_bis'].append(datetime.now().timestamp())
         self.timings_logfile_dict['camera_bis'].append((time.perf_counter() - self.perf_counter_init)*1000)
-#        self.timings_logfile_dict['camera_bis'].append(self.times_bis)
+        self.timings_logfile_dict['camera_bis'].append(self.times_bis)
         while self.acquire_images:
             if self.acquire_images == False:
                 break
-            # if image_acquired == 800:
-            #     break
             else:
                 self.images, self.times = self.cam.get_images()  ## getting the images, getting 0, 1 or >1 images
                 while self.images == []:
@@ -144,7 +184,7 @@ class CameraGui(QWidget):
                     for j in range(len(self.images)):
                         self.image_list.append(self.images[j])
                     self.timings_logfile_dict['camera'].append(self.times)
-#        self.timings_logfile_dict['camera_bis'].append(self.times_bis)
+        self.timings_logfile_dict['camera_bis'].append(self.times_bis)
         self.cam.end_acquisition()
         self.saving_images(self.images, self.times)
 #        self.camera_signal.finished.emit()  ## not sure this is needed
@@ -159,27 +199,22 @@ class CameraGui(QWidget):
         if self.saving_check.isChecked():
             ## saving images
             save_images_worker = Worker(self.save, self.image_list, self.path_raw_data)
-            save_images_worker.signals.result.connect(self.print_output)
-            save_images_worker.signals.finished.connect(self.thread_complete)
+            save_images_worker.signals.result.connect(save_images_worker.print_output)
+            save_images_worker.signals.finished.connect(save_images_worker.thread_complete)
             #save_images_worker.signals.progress.connect(self.progress_fn)
             self.threadpool.start(save_images_worker)
             ## saving images times
-            with open(self.timings_logfile_path, "w") as file:
-                file.write(json.dumps(self.timings_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
+            jsonFunctions.write_to_json(self.timings_logfile_dict, self.timings_logfile_path)
             ## saving experiment info
             self.info_logfile_dict['roi'].append(self.roi_list)
             self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
             self.info_logfile_dict['binning'].append(self.bin_size)
             self.info_logfile_dict['fps'].append(self.internal_frame_rate)
             self.info_logfile_dict['fov'].append((self.x_init, self.x_dim, self.y_init, self.y_dim))
-            with open(self.info_logfile_path, "w") as file:
-                file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
+            jsonFunctions.write_to_json(self.info_logfile_dict, self.info_logfile_path)
 
     def roi(self):
-        axes = (0, 1)
         self.saved_ROI_image.setImage(self.image_reshaped) ## get the image into the ROI graphic interface
-        # data, coords = self.graphicsView.roi.getArrayRegion(self.image_reshaped.view(), self.graphicsView.imageItem, axes, returnMappedCoords=True) ## get the roi data and coords
-        # self.roi_list.append(coords)
         roi_state = self.graphicsView.roi.getState()
         roi_state['pos'][0] = roi_state['pos'][0] + self.x_init
         roi_state['pos'][1] = roi_state['pos'][1] + self.y_init
@@ -187,16 +222,16 @@ class CameraGui(QWidget):
 
         pen = QPen(Qt.red, 0.1) ## draw on the image to represent the roi
         for nb in range(len(self.roi_list)):
-            r = pg.ROI(pos = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1]), \
+            self.r = pg.ROI(pos = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1]), \
                                 size= (self.roi_list[nb]['size'][0], self.roi_list[nb]['size'][1]), \
                                 angle = self.roi_list[nb]['angle'], pen=pen, movable=False, removable=False)
-            self.saved_ROI_image.getView().addItem(r)
+            self.saved_ROI_image.getView().addItem(self.r)
         self.ROI_label_placeholder.setText(str(len(self.roi_list)))
 
     def export_roi(self):
         self.info_logfile_dict['roi'].append(self.roi_list)
-        with open(self.info_logfile_path, 'w') as file:
-            file.write(json.dumps(self.info_logfile_dict, default=lambda x:list(x), indent=4, sort_keys=True))
+        jsonFunctions.write_to_json(self.info_logfile_dict, self.info_logfile_path)
+        print('roi exported')
 
     def reset_roi(self):
         self.saved_ROI_image.getView().clear()
@@ -255,10 +290,11 @@ class CameraGui(QWidget):
         self.internal_frame_rate = self.cam.get_internal_frame_rate()
         self.internal_frame_rate_label.setText(str(self.internal_frame_rate))
 
+    def turn_off(self):
+        self.cam.shutdown()
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = CameraGui()
-    win.showMaximized()
     app.exit(app.exec_())
