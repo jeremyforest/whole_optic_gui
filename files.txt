@@ -1,0 +1,1 @@
+c:\users\barral\anaconda3\envs\app_dev\lib\site-packages\OPTIMAQS-0.3-py3.7.egg
