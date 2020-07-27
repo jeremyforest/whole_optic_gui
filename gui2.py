@@ -832,8 +832,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             elif index == 1: ## Choose HDMI Video Sequence
                 vlc_path = "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"
                 video_path = f"{self.path}\\dlp_images\\dlp_movie.avi"
-                ## is the screen number working ? neede to test with dlp screen. shouhld work if dlp is screen 1
-                subprocess.call([vlc_path, '--play-and-exit', '-f', '--qt-fullscreen-screennumber=1', video_path], shell=False)
+                ## is the screen number working ? neede to test with dlp screen. need to adapt screen number
+                subprocess.call([vlc_path, '--ignore-config', '--play-and-exit', '--fullscreen', '--qt-fullscreen-screennumber=1', video_path], shell=True)
 
         ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
@@ -875,7 +875,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         filenames = os.listdir(f"{self.path}/dlp_images/")
         size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
         h, v, z = size_image.shape
-        fps = 100  ## if 100 then 1 frame last 10 ms
+        fps = 1  ## if 100 then 1 frame last 10 ms
         out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'MJPG'), fps, (v,h))  #MJPG
 #        out = cv2.VideoWriter(f"{path}/dlp_images/dlp_movie.avi", -1, fps, size)
         for filename in filenames:
@@ -948,10 +948,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ## lauching auto protocol
         for i in range(dlp_repeat_sequence):
             for j in range(dlp_sequence):
-                self.laser_on()
+#                self.laser_on()
                 custom_sleep_function(1000)
                 if self.record_electrophysiological_trace_radioButton.isChecked():
-                    self.ephy_stim_start()
+                    self.start_stimulation()
                 ## ON
                 self.display_mode(mode_index)
                 if mode_index == 0: ## static image
@@ -966,14 +966,15 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 #                self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
                 custom_sleep_function(dlp_on)
                 if self.record_electrophysiological_trace_radioButton.isChecked():
-                    self.ephy_stim_end()
+                    self.end_stimulation()
                 self.turn_dlp_off()
 #                self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
                 custom_sleep_function(dlp_off)
-            self.laser_off()
+#            self.laser_off()
             custom_sleep_function(dlp_interval)
         self.camera_signal.finished.emit()
-        self.ephy_signal.finished.emit()
+        if self.record_electrophysiological_trace_radioButton.isChecked():
+            self.ephy_signal.finished.emit()
         self.dlp_signal.finished.emit()
         self.end_experiment_function.finished.emit()
 
@@ -1056,24 +1057,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.analog_input.StartTask()
         
         ## stimulating
-        self.analog_output = PyDAQmx.Task()
-        self.analog_output.CreateAOVoltageChan("Dev1/ao0",
-                                "",
-                                -10.0,
-                                10.0,
-                                PyDAQmx.DAQmx_Val_Volts,
-                                None)
-        self.analog_output.CfgSampClkTiming("",
-                    self.sampling_rate,  ## sampling rate
-                    PyDAQmx.DAQmx_Val_Rising,  ## active edge
-                    PyDAQmx.DAQmx_Val_ContSamps, ## sample mode
-                    1000) ## nb of sample to acquire
+#        self.analog_output = PyDAQmx.Task()
+#        self.analog_output.CreateAOVoltageChan("Dev1/ao0",
+#                                "",
+#                                -10.0,
+#                                10.0,
+#                                PyDAQmx.DAQmx_Val_Volts,
+#                                None)
+#        self.analog_output.CfgSampClkTiming("",
+#                    self.sampling_rate,  ## sampling rate
+#                    PyDAQmx.DAQmx_Val_Rising,  ## active edge
+#                    PyDAQmx.DAQmx_Val_ContSamps, ## sample mode
+#                    1000) ## nb of sample to acquire
 #        self.analog_output.StartTask()
         
-#        self.pulse = np.zeros(1, dtype=np.uint8)
-#        self.write_digital_lines = PyDAQmx.Task()
-#        self.write_digital_lines.CreateDOChan("/Dev1/port0/line3","",PyDAQmx.DAQmx_Val_ChanForAllLines)
-#        self.write_digital_lines.StartTask()
+        self.pulse = np.zeros(1, dtype=np.uint8)
+        self.write_digital_lines = PyDAQmx.Task()
+        self.write_digital_lines.CreateDOChan("/Dev1/port0/line3","",PyDAQmx.DAQmx_Val_ChanForAllLines)
+        self.write_digital_lines.StartTask()
         
     def start_recording(self):
         self.analog_input.ReadAnalogF64(self.sampling_rate,   ## number of sample per channel
@@ -1101,14 +1102,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.voltage_plot = self.plot.addPlot(title='Voltage')
 
         self.curve0 = self.voltage_plot.plot(self.x, self.data_ephy[0], pen='b')
-#        self.curve1 = self.voltage_plot.plot(self.x, self.data_ephy[1], pen='g')
-#        self.curve2 = self.voltage_plot.plot(self.x, self.data_ephy[2], pen='r')
-#        self.curve3 = self.voltage_plot.plot(self.x, self.data_ephy[3], pen='c')
-#        
-#        self.curve4 = self.voltage_plot.plot(self.x, self.data_ephy[4], pen='m')
-#        self.curve5 = self.voltage_plot.plot(self.x, self.data_ephy[5], pen='y')
-#        self.curve6 = self.voltage_plot.plot(self.x, self.data_ephy[6], pen='k')
-#        self.curve7 = self.voltage_plot.plot(self.x, self.data_ephy[7], pen='w')
+        self.curve1 = self.voltage_plot.plot(self.x, self.data_ephy[1], pen='g')
+        self.curve2 = self.voltage_plot.plot(self.x, self.data_ephy[2], pen='r')
+        self.curve3 = self.voltage_plot.plot(self.x, self.data_ephy[3], pen='c')
+        
+        self.curve4 = self.voltage_plot.plot(self.x, self.data_ephy[4], pen='m')
+        self.curve5 = self.voltage_plot.plot(self.x, self.data_ephy[5], pen='y')
+        self.curve6 = self.voltage_plot.plot(self.x, self.data_ephy[6], pen='k')
+        self.curve7 = self.voltage_plot.plot(self.x, self.data_ephy[7], pen='w')
         
         self.voltage_plot.addLegend()
         self.voltage_plot.showGrid(x=True, y=True)
@@ -1133,14 +1134,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 #            self.voltage_plot.setData(1000, self.data_ephy[channel])
 #            self.voltage_plot.plot(self.x, self.data_ephy[channel], clear=True, pen=color)
         self.curve0.setData(self.x, self.data_ephy[0])
-#        self.curve1.setData(self.x, self.data_ephy[1])
-#        self.curve2.setData(self.x, self.data_ephy[2])
-#        self.curve3.setData(self.x, self.data_ephy[3])
-#        
-#        self.curve4.setData(self.x, self.data_ephy[4])
-#        self.curve5.setData(self.x, self.data_ephy[5])
-#        self.curve6.setData(self.x, self.data_ephy[6])
-#        self.curve7.setData(self.x, self.data_ephy[7])
+        self.curve1.setData(self.x, self.data_ephy[1])
+        self.curve2.setData(self.x, self.data_ephy[2])
+        self.curve3.setData(self.x, self.data_ephy[3])
+        
+        self.curve4.setData(self.x, self.data_ephy[4])
+        self.curve5.setData(self.x, self.data_ephy[5])
+        self.curve6.setData(self.x, self.data_ephy[6])
+        self.curve7.setData(self.x, self.data_ephy[7])
 
         
     def close_graph_windows(self):
@@ -1153,53 +1154,53 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def stop_recording(self):
         print('ephy end signal received')
         self.recording = False
+        self.save_ephy_data(self.ephy_data)
         self.analog_input.StopTask()
         self.timings_logfile_dict['ephy']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
 
     def save_ephy_data(self, data):
-#        np.save(file = f"{self.path}/voltage.npy", arr = data)
-        np.savetxt(f"{self.path}/voltage.txt", self.data_ephy)
+        np.save(file = f"{self.path}/voltage.npy", arr = data)
+#        np.savetxt(f"{self.path}/voltage.txt", data)
 
     def ephy_recording_thread(self):
-        if self.record_electrophysiological_trace_radioButton.isChecked():
-            while self.recording:
-                data = self.start_recording()
-                self.graph_voltage()
-                self.ephy_data.append(data)
-            self.save_ephy_data(self.ephy_data)
+#        if self.record_electrophysiological_trace_radioButton.isChecked():
+        while self.recording:
+            self.data_ephy = self.start_recording()
+#            self.graph_voltage()
+            self.ephy_data.append(self.data_ephy)
 
     def start_stimulation(self):
         print('stimulation start')
 #        set_voltage_value = 5.
-        self.stim_data = np.array([5]*1000)
-        self.stim_data[1:100] = 0
-        self.stim_data[900:1000] = 0
+#        self.stim_data = np.array([5]*1000)
+#        self.stim_data[1:100] = 0
+#        self.stim_data[900:1000] = 0
 #        self.stim_data = np.array([5])
-        n=1000
-        sampsPerChanWritten=PyDAQmx.int32()
-
+#        n=1000
+#        sampsPerChanWritten=PyDAQmx.int32()
+#
 #        self.analog_output.WriteAnalogScalarF64(1, 10.0, set_voltage_value, None)
 #        self.analog_output.WriteAnalogF64(1000, 0, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.stim_data, PyDAQmx.byref(sampsPerChanWritten), None)
-        self.analog_output.WriteAnalogF64(n, 0, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.stim_data, PyDAQmx.byref(sampsPerChanWritten), None)
-        self.analog_output.StartTask()
+#        self.analog_output.WriteAnalogF64(n, 0, 10.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.stim_data, PyDAQmx.byref(sampsPerChanWritten), None)
+#        self.analog_output.StartTask()
         
         self.timings_logfile_dict['ephy_stim']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
 
 
-#        self.pulse[0]=1
-#        self.write_digital_lines.WriteDigitalLines(1, 1, 5.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse, None, None)
+        self.pulse[0]=1
+        self.write_digital_lines.WriteDigitalLines(1, 1, 5.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse, None, None)
 
     def end_stimulation(self):
-        self.analog_output.StopTask()
+#        self.analog_output.StopTask()
         self.timings_logfile_dict['ephy_stim']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
         print('stimulation end')
         
-#        self.pulse[0]=0
-#        self.write_digital_lines.WriteDigitalLines(1, 1, 5.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse , None, None)
+        self.pulse[0]=0
+        self.write_digital_lines.WriteDigitalLines(1, 1, 5.0, PyDAQmx.DAQmx_Val_GroupByChannel, self.pulse , None, None)
         
     def ephy_stim(self):
         self.start_stimulation()
-        custom_sleep_function(2500)
+        custom_sleep_function(200)
         self.end_stimulation()
 
 
