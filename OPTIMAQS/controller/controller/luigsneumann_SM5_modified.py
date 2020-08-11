@@ -235,7 +235,7 @@ class LuigsNeumann_SM5(SerialDevice):
             res = int(binascii.hexlify(struct.unpack('s', res[6])[0])[1])
 
 if __name__ == '__main__':
-    sm5 = LuigsNeumann_SM5('COM4')
+    sm5 = LuigsNeumann_SM5('COM5')
 
     
     print ('getting positions:')
