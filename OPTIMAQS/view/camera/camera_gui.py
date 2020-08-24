@@ -18,9 +18,8 @@ import os
 from OPTIMAQS.utils.signals import Signals
 from OPTIMAQS.utils.worker import Worker
 from OPTIMAQS.utils.json_functions import jsonFunctions
+from OPTIMAQS.utils.debug import Pyqt_debugger
 
-# import sys
-# sys.path.append('../../')
 
 class CameraGui(QWidget):
     """
@@ -41,8 +40,9 @@ class CameraGui(QWidget):
         self.actions()
         self.threadpool = QThreadPool()
 
-        self.path_raw_data = jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
+        self.path_init = jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
         self.path_experiment = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
+        self.path_raw_data = self.path_experiment + '\\raw_data'
         self.save_images = False
         self.simulated = False
         self.images = []
@@ -132,7 +132,7 @@ class CameraGui(QWidget):
         self.export_ROI_button.clicked.connect(self.export_roi)
 
     def save_as_png(self, array, image_name):
-        plt.imsave('{}{}.png'.format(self.path, image_name), array, cmap='gray')
+        plt.imsave('{}{}.png'.format(self.path_experiment, image_name), array, cmap='gray')
 
     def snap_image(self): ## only takes an image and saves it
         self.cam.start_acquisition()
@@ -240,9 +240,12 @@ class CameraGui(QWidget):
         self.ROI_label_placeholder.setText(str(0))
 
     def save(self, images, path): ### npy format
+        Pyqt_debugger.debug_trace()
         for i in range(len(images)):
             image = images[i]
-            np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
+            # np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
+            # print(f'{str(path)}/image{str(i).zfill(5)}.npy')
+            np.save(file = f'{str(path)}/image{str(i).zfill(5)}.npy', arr=image)
             print("saved file")
 
     def replay(self):
