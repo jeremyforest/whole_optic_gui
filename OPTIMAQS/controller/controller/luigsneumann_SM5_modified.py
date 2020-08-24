@@ -30,9 +30,22 @@ class LuigsNeumann_SM5(SerialDevice):
         self.port.bytesize = serial.EIGHTBITS
         self.port.parity=serial.PARITY_NONE
         self.port.stopbits=serial.STOPBITS_ONE
-        self.port.timeout=0.1 #None is blocking; 0 is non blocking
+        self.port.timeout=1 #None is blocking; 0 is non blocking
 
+        self.port.rts = True
+        self.port.dtr = True
+        self.port.xonxoff = False
+        self.port.rtscts = False
+        self.port.dsrdtr = False
+        #self.port.writeTimeout = 2
+        #self.port.inter_byte_timeout = 1
+        
         self.port.open()
+        self.port.flushInput()
+        self.port.flushOutput()
+
+        #import pdb; pdb.set_trace()
+
         self.established_time = time.time()
         self.establish_connection()
 
@@ -40,6 +53,7 @@ class LuigsNeumann_SM5(SerialDevice):
         '''
         Send a command to the controller
         '''
+
         now = time.time()
         if now - self.established_time > 3:
             self.establish_connection()
@@ -49,25 +63,35 @@ class LuigsNeumann_SM5(SerialDevice):
 
         # Create hex-string to be sent
         # <syn><ID><byte number>
-        send = '16' + ID + '%0.2X' % len(data)
+        send = '16' + ID + '%0.2X' % len(data) 
+        print('hex string:' + send)
 
         # <data>
         # Loop over length of data to be sent
         for i in range(len(data)):
             send += '%0.2X' % data[i]
-
+            print('send data:' + send)
         # <CRC>
         send += '%0.2X%0.2X' % (high,low)
+        print('send data with crc:' + send)
 
         # Convert hex string to bytes
         sendbytes = binascii.unhexlify(send)
-
+        print('sendbytes:')
+        print(sendbytes)
+        
         expected = binascii.unhexlify('06' + ack_ID)
+        print('expected:')
+        print(expected)
 
         self.port.write(sendbytes)
+        time.sleep(0.1)
 
         answer = self.port.read(nbytes_answer+6)
-
+        # answer = self.port.readlines()
+        print('answer:')
+        print(answer)
+        
         if answer[:len(expected)] != expected :
             warnings.warn('Did not get expected response for command with ID ' + ID +' ; resending')
             # Resend
@@ -235,7 +259,7 @@ class LuigsNeumann_SM5(SerialDevice):
             res = int(binascii.hexlify(struct.unpack('s', res[6])[0])[1])
 
 if __name__ == '__main__':
-    sm5 = LuigsNeumann_SM5('COM5')
+    sm5 = LuigsNeumann_SM5('COM4')
 
     
     print ('getting positions:')
