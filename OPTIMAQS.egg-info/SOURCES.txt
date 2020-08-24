@@ -1,10 +1,12 @@
 README.md
 setup.py
 OPTIMAQS/__init__.py
+OPTIMAQS/custom_pyqtgraph_widget.py
 OPTIMAQS.egg-info/PKG-INFO
 OPTIMAQS.egg-info/SOURCES.txt
 OPTIMAQS.egg-info/dependency_links.txt
 OPTIMAQS.egg-info/top_level.txt
+OPTIMAQS/config_files/__init__.py
 OPTIMAQS/controller/__init__.py
 OPTIMAQS/controller/camera/__init__.py
 OPTIMAQS/controller/camera/hamamatsu_camera.py
@@ -52,3 +54,6 @@ OPTIMAQS/view/electrophysiology/__init__.py
 OPTIMAQS/view/electrophysiology/electrophysiology_gui.py
 OPTIMAQS/view/laser/__init__.py
 OPTIMAQS/view/laser/laser_gui.py
+OPTIMAQS/view/main/__init__.py
+OPTIMAQS/view/main/custom_pyqtgraph_widget.py
+OPTIMAQS/view/main/main.py
