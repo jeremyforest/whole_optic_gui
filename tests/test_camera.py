@@ -1,5 +1,5 @@
 import unittest
-from OPTIMAQS.controller.camera.hamamatsu_camera import HamamatsuCamera, initCam
+# from OPTIMAQS.controller.camera.hamamatsu_camera import HamamatsuCamera, initCam
 
 class TestCamera(unittest.TestCase):
     def test_connection(self):
