@@ -40,8 +40,11 @@ class AutomationGui(QWidget):
 
         ## can there be a better way than having automation on top of main ?
         self.dlp_gui = DLPGui()
+        self.dlp_gui.setGeometry(1200, 400, 500, 100)
         self.camera_gui = CameraGui()
+        self.camera_gui.setGeometry(100, 30, 200, 900)
         self.laser_gui = LaserGui()
+        self.laser_gui.setGeometry(1200, 250, 500, 100)
 #        self.controller_gui = ControllerGui
 #        self.electrophysiology_gui = ElectrophysiologyGui()
 

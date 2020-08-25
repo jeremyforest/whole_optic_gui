@@ -97,6 +97,7 @@ class MainWindow(QMainWindow):
         """
         print("loading camera module")
         self.camera_gui = CameraGui()
+        self.camera_gui.setGeometry(100, 30, 200, 900)
         self.activate_camera = True
 
     def load_laser(self):
@@ -105,6 +106,7 @@ class MainWindow(QMainWindow):
         """
         print("loading laser module")
         self.laser_gui = LaserGui()
+        self.laser_gui.setGeometry(1200, 250, 500, 100)
         self.activate_laser = True
 
     def load_dlp(self):
@@ -113,6 +115,7 @@ class MainWindow(QMainWindow):
         """
         print("loading DLP module")
         self.dlp_gui = DLPGui()
+        self.dlp_gui.setGeometry(1200, 400, 500, 100)
         self.activate_dlp = True
 
     def load_controller(self):
@@ -129,6 +132,7 @@ class MainWindow(QMainWindow):
         """
         print("loading Automation module")
         self.automation_gui = AutomationGui()
+        self.automation_gui.setGeometry(1200, 700, 500, 100)
         self.activate_automation = True
 
     def load_electrophysiology(self):
@@ -281,6 +285,7 @@ def main():
     """
     app = QApplication(sys.argv)
     win = MainWindow()
+    win.setGeometry(1200, 30, 500, 100)
     app.exit(app.exec_())
 
 
