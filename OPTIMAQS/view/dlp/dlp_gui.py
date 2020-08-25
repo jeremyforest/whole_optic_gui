@@ -20,6 +20,7 @@ import subprocess
 from OPTIMAQS.utils.signals import Signals
 from OPTIMAQS.utils.json_functions import jsonFunctions
 from OPTIMAQS.utils.worker import Worker
+from OPTIMAQS.utils.debug import Pyqt_debugger
 
 
 class DLPGui(QWidget):
@@ -38,14 +39,13 @@ class DLPGui(QWidget):
         self.dlp_image_path = []
         self.path = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
 
-        
         ## initialize dlp
         self.import_dlp_model()
         self.actions()
         self.initialize_dlp_parameters()
         self.calibration_dlp_camera_matrix_path = 'C:\\Users\\barral\\Desktop\\whole_optic_gui-refactoring\\OPTIMAQS\\view\\dlp\\calibration_matrix.json'
         self.calibration()
-        
+
         ## JSON files
         self.info_logfile_path = self.path + '/experiment_' + self.path[-1] + '_info.json'
         self.info_logfile_dict = {}
@@ -251,14 +251,15 @@ class DLPGui(QWidget):
                     # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
 
             elif index == 1:  ##generate static image from ROI
+                Pyqt_debugger.debug_trace()
                 self.info_logfile_dict = jsonFunctions.open_json(self.info_logfile_path)
                 self.roi_list = self.info_logfile_dict['roi']
                 black_image = Image.new('1', (2048,2048), color=0) ## 2048 because we want the full fov
                 black_image_with_ROI = black_image
-                for nb in range(len(self.roi_list)):
-                    x0, y0 = (self.roi_list[nb][0]['pos'][0], self.roi_list[nb][0]['pos'][1])
-                    x1, y1 = (self.roi_list[nb][0]['pos'][0] + self.roi_list[nb][0]['size'][0],
-                                self.roi_list[nb][0]['pos'][1] + self.roi_list[nb][0]['size'][1])
+                for nb in range(len(self.roi_list[0])):
+                    x0, y0 = (self.roi_list[0][nb]['pos'][0], self.roi_list[0][nb]['pos'][1])
+                    x1, y1 = (self.roi_list[0][nb]['pos'][0] + self.roi_list[0][nb]['size'][0],
+                              self.roi_list[0][nb]['pos'][1] + self.roi_list[0][nb]['size'][1])
                     draw = ImageDraw.Draw(black_image_with_ROI)
                     draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
@@ -370,11 +371,13 @@ class DLPGui(QWidget):
         print('dlp end signal received')
 
     def generate_one_image_per_roi(self, roi_list):
-        for nb in range(len(self.roi_list)):
+        for nb in range(len(self.roi_list[0])):
             black_image = Image.new('1', (2048,2048), color=0)
             black_image_with_ROI = black_image
-            x0, y0 = (self.roi_list[nb]['pos'][0], self.roi_list[nb]['pos'][1])
-            x1, y1 = (self.roi_list[nb]['pos'][0] + self.roi_list[nb]['size'][0], self.roi_list[nb]['pos'][1] + self.roi_list[nb]['size'][1])
+            Pyqt_debugger.debug_trace()
+            x0, y0 = (self.roi_list[0][nb]['pos'][0], self.roi_list[0][nb]['pos'][1])
+            x1, y1 = (self.roi_list[0][nb]['pos'][0] + self.roi_list[0][nb]['size'][0],
+                      self.roi_list[0][nb]['pos'][1] + self.roi_list[0][nb]['size'][1])
             draw = ImageDraw.Draw(black_image_with_ROI)
             draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
             black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
@@ -384,6 +387,7 @@ class DLPGui(QWidget):
             cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped_flipped)
 
     def movie_from_images(self):
+        Pyqt_debugger.debug_trace()
         filenames = os.listdir(f"{self.path}/dlp_images/")
         size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
         h, v, z = size_image.shape
