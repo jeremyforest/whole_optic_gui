@@ -251,7 +251,6 @@ class DLPGui(QWidget):
                     # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
 
             elif index == 1:  ##generate static image from ROI
-                Pyqt_debugger.debug_trace()
                 self.info_logfile_dict = jsonFunctions.open_json(self.info_logfile_path)
                 self.roi_list = self.info_logfile_dict['roi']
                 black_image = Image.new('1', (2048,2048), color=0) ## 2048 because we want the full fov
@@ -337,11 +336,12 @@ class DLPGui(QWidget):
 
         ## HDMI Video Input mode
         elif self.display_mode_combobox.currentIndex() == 2:  ## HDMI video sequence
+            self.info_logfile_dict = jsonFunctions.open_json(self.info_logfile_path)
             self.roi_list = self.info_logfile_dict['roi']
             if index == 0: ## Generate ROI Files and Compile Movie From Images
                 self.generate_one_image_per_roi(self.roi_list)
                 time.sleep(5)
-                self.movie_from_images()
+                self.movie_from_images2()
             elif index == 1: ## Choose HDMI Video Sequence
                 vlc_path = "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"
                 video_path = f"{self.path}\\dlp_images\\dlp_movie.avi"
@@ -374,7 +374,6 @@ class DLPGui(QWidget):
         for nb in range(len(self.roi_list[0])):
             black_image = Image.new('1', (2048,2048), color=0)
             black_image_with_ROI = black_image
-            Pyqt_debugger.debug_trace()
             x0, y0 = (self.roi_list[0][nb]['pos'][0], self.roi_list[0][nb]['pos'][1])
             x1, y1 = (self.roi_list[0][nb]['pos'][0] + self.roi_list[0][nb]['size'][0],
                       self.roi_list[0][nb]['pos'][1] + self.roi_list[0][nb]['size'][1])
@@ -387,11 +386,10 @@ class DLPGui(QWidget):
             cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped_flipped)
 
     def movie_from_images(self):
-        Pyqt_debugger.debug_trace()
         filenames = os.listdir(f"{self.path}/dlp_images/")
         size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
         h, v, z = size_image.shape
-        fps = 100  ## if 100 then 1 frame last 10 ms
+        fps = 1  ## if 100 then 1 frame last 10 ms
         out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'MJPG'), fps, (v,h))  #MJPG
 #        out = cv2.VideoWriter(f"{path}/dlp_images/dlp_movie.avi", -1, fps, size)
         for filename in filenames:
@@ -399,6 +397,49 @@ class DLPGui(QWidget):
             img = cv2.imread(f"{self.path}/dlp_images/{filename}")
             out.write(img)
         out.release()
+
+    def movie_from_images2(self, time_stim_image=25, inter_image_interval=100):
+
+        ## fps = 1000 so that resolution min is 1ms
+        ## if stim = 5 ms and delay betwee, stim = 25 ms
+        ## nb of stim images = 5/1000*1000 = 5
+        ## nb of black images =25/1000*1000 = 25
+
+        Pyqt_debugger.debug_trace()
+        filenames = os.listdir(f"{self.path}/dlp_images/")
+        size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
+        h, v, z = size_image.shape
+        fps = 1000
+        repeat_stim_image = int(time_stim_image/1000 * fps)
+        repeat_black_image = int(inter_image_interval/1000 * fps)
+        
+        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", 
+                              cv2.VideoWriter_fourcc(*'MJPG'), 
+                              fps, 
+                              (v,h))
+        filenames_repeat = np.repeat(filenames, repeat_stim_image)
+        idx_insert = np.arange(0, len(filenames_repeat), repeat_stim_image)
+        black_images = ['b']*repeat_black_image
+        
+        for i in idx_insert:
+            if i == 0:
+                filenames_for_videos = np.insert(filenames_repeat, 
+                                                 i, 
+                                                 np.array(black_images))
+            else: 
+                filenames_for_videos = np.insert(filenames_for_videos, 
+                                                 i, 
+                                                 np.array(black_images))
+        for filename in filenames_for_videos:
+            if filename == 'b':
+                img = np.uint8(np.zeros((h,v,z)))
+            else:
+                img = cv2.imread(f"{self.path}/dlp_images/{filename}")
+                #img = cv2.imread(f"{filename}")
+            out.write(img)
+        out.release()
+
+
 
     def turn_off(self):
         self.dlp.disconnect()
