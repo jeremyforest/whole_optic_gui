@@ -404,8 +404,6 @@ class DLPGui(QWidget):
         ## if stim = 5 ms and delay betwee, stim = 25 ms
         ## nb of stim images = 5/1000*1000 = 5
         ## nb of black images =25/1000*1000 = 25
-
-        Pyqt_debugger.debug_trace()
         filenames = os.listdir(f"{self.path}/dlp_images/")
         size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
         h, v, z = size_image.shape
@@ -421,8 +419,8 @@ class DLPGui(QWidget):
         idx_insert = np.arange(0, len(filenames_repeat), repeat_stim_image)
         black_images = ['b']*repeat_black_image
         
-        for i in idx_insert:
-            if i == 0:
+        for i in idx_insert[::-1]:
+            if i == idx_insert[-1]:
                 filenames_for_videos = np.insert(filenames_repeat, 
                                                  i, 
                                                  np.array(black_images))
@@ -435,7 +433,6 @@ class DLPGui(QWidget):
                 img = np.uint8(np.zeros((h,v,z)))
             else:
                 img = cv2.imread(f"{self.path}/dlp_images/{filename}")
-                #img = cv2.imread(f"{filename}")
             out.write(img)
         out.release()
 
