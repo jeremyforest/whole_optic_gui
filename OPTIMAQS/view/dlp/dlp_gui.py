@@ -60,6 +60,8 @@ class DLPGui(QWidget):
         ## timings
         self.perf_counter_init = jsonFunctions.open_json('OPTIMAQS/config_files/perf_counter_init.json')
 
+        ## threads
+        self.threadpool = QThreadPool()
 
     def import_dlp_model(self):
         """
@@ -341,13 +343,12 @@ class DLPGui(QWidget):
             if index == 0: ## Generate ROI Files and Compile Movie From Images
                 self.generate_one_image_per_roi(self.roi_list)
                 time.sleep(5)
-                self.movie_from_images2()
+                self.movie_from_images()
             elif index == 1: ## Choose HDMI Video Sequence
-                vlc_path = "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"
-                video_path = f"{self.path}\\dlp_images\\dlp_movie.avi"
                 ## is the screen number working ? neede to test with dlp screen. shouhld work if dlp is screen 1
-                subprocess.call([vlc_path, '--play-and-exit', '-f', '--qt-fullscreen-screennumber=1', video_path], shell=False)
-
+                run_vlc_worker = Worker(self.run_vlc)
+                self.threadpool.start(run_vlc_worker)
+                
         ## Pattern sequence mode
         elif self.display_mode_combobox.currentIndex() == 3:  ## Pattern sequence
             if index == 0: # Choose Pattern Sequence To Load
@@ -363,6 +364,12 @@ class DLPGui(QWidget):
 
             if index == 2: ## Generate Multiple Images with One ROI Per Image
                 self.generate_one_image_per_roi(self.roi_list)
+
+    def run_vlc(self):
+        vlc_path = "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"
+        video_path = f"{self.path}/dlp_images/dlp_movie.avi"
+        subprocess.call([vlc_path, '--play-and-exit', '-f', '--qt-fullscreen-screennumber=4|5', os.path.abspath(video_path)], shell=False)
+
 
     def turn_dlp_off(self):
         self.dlp.set_display_mode('internal')
@@ -385,21 +392,8 @@ class DLPGui(QWidget):
             black_image_with_ROI_warped_flipped = cv2.flip(black_image_with_ROI_warped, 0)
             cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped_flipped)
 
-    def movie_from_images(self):
-        filenames = os.listdir(f"{self.path}/dlp_images/")
-        size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
-        h, v, z = size_image.shape
-        fps = 1  ## if 100 then 1 frame last 10 ms
-        out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie.avi", cv2.VideoWriter_fourcc(*'MJPG'), fps, (v,h))  #MJPG
-#        out = cv2.VideoWriter(f"{path}/dlp_images/dlp_movie.avi", -1, fps, size)
-        for filename in filenames:
-            print(f'writing image {filename} in video')
-            img = cv2.imread(f"{self.path}/dlp_images/{filename}")
-            out.write(img)
-        out.release()
 
-    def movie_from_images2(self, time_stim_image=25, inter_image_interval=100):
-
+    def movie_from_images(self, time_stim_image=25, inter_image_interval=100):
         ## fps = 1000 so that resolution min is 1ms
         ## if stim = 5 ms and delay betwee, stim = 25 ms
         ## nb of stim images = 5/1000*1000 = 5
