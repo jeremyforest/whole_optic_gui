@@ -40,8 +40,10 @@ class CameraGui(QWidget):
         self.actions()
         self.threadpool = QThreadPool()
 
-        self.path_init = jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
-        self.path_experiment = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
+        self.path_init = jsonFunctions.open_json(
+                                        'OPTIMAQS/config_files/path_init.json')
+        self.path_experiment = jsonFunctions.open_json(
+                                'OPTIMAQS/config_files/last_experiment.json')
         self.path_raw_data = self.path_experiment + '\\raw_data'
         self.save_images = False
         self.simulated = False
@@ -52,17 +54,20 @@ class CameraGui(QWidget):
         self.times_bis=[]
 
         ## timings
-        self.perf_counter_init = jsonFunctions.open_json('OPTIMAQS/config_files/perf_counter_init.json')
+        self.perf_counter_init = jsonFunctions.open_json(
+                                'OPTIMAQS/config_files/perf_counter_init.json')
 
         #import camera related log variables. Another way to do that ? 
-        self.info_logfile_path = self.path_experiment + '/experiment_' + self.path_experiment[-1] + '_info.json'
+        self.info_logfile_path = self.path_experiment + '/experiment_' + \
+                                 self.path_experiment[-1] + '_info.json'
         self.info_logfile_dict = {}
         self.info_logfile_dict['roi'] = []
         self.info_logfile_dict['exposure time'] = []
         self.info_logfile_dict['binning'] = []
         self.info_logfile_dict['fov'] = []
         self.info_logfile_dict['fps'] = []
-        self.timings_logfile_path = self.path_experiment + '/experiment_' + self.path_experiment[-1] + '_timings.json'
+        self.timings_logfile_path = self.path_experiment + '/experiment_' + \
+                                    self.path_experiment[-1] + '_timings.json'
         self.timings_logfile_dict = {}
         self.timings_logfile_dict['camera'] = []
         self.timings_logfile_dict['camera_bis'] = []
@@ -118,7 +123,8 @@ class CameraGui(QWidget):
         self.exposure_time_bar.valueChanged.connect(self.exposure_time)
         self.binning_combo_box.activated.connect(self.binning)
         self.subArray_mode_radioButton.toggled.connect(self.subarray)
-        self.update_internal_frame_rate_button.clicked.connect(self.update_internal_frame_rate)
+        self.update_internal_frame_rate_button.clicked.connect(
+                                            self.update_internal_frame_rate)
         self.stop_stream_button.clicked.connect(self.stop_stream)
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_plot)
@@ -240,7 +246,6 @@ class CameraGui(QWidget):
         self.ROI_label_placeholder.setText(str(0))
 
     def save(self, images, path): ### npy format
-        Pyqt_debugger.debug_trace()
         for i in range(len(images)):
             image = images[i]
             # np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)

@@ -17,6 +17,8 @@ class Custom_pyqtgraph_widget(pg.ImageWindow):
         pg.ImageWindow.__init__(self, **kargs)
         self.setParent(parent)
         self.setWindowTitle('camera view')
+        self.ROI.setPos = 100
+        self.ROI.setSize = 100
 
 if __name__ == '__main__':
     w = Custom_pyqtgraph_widget()
