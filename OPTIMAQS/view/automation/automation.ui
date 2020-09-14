@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>754</width>
-    <height>227</height>
+    <width>671</width>
+    <height>319</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QGridLayout" name="gridLayout">
+  <layout class="QFormLayout" name="formLayout">
    <item row="0" column="0">
     <widget class="QFrame" name="automation">
      <property name="sizePolicy">
@@ -33,101 +33,143 @@
         </property>
        </widget>
       </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="export_experiment_button">
+        <property name="text">
+         <string>Export Experiment</string>
+        </property>
+       </widget>
+      </item>
       <item row="2" column="1" rowspan="2" colspan="4">
        <widget class="QTabWidget" name="auto_protocol_tabWidget">
         <property name="currentIndex">
          <number>0</number>
         </property>
-        <widget class="QWidget" name="DLP_configuration">
+        <widget class="QWidget" name="DLP_static_image">
          <attribute name="title">
-          <string>DLP_configuration</string>
+          <string>DLP_static_image</string>
          </attribute>
          <layout class="QGridLayout" name="gridLayout_10">
-          <item row="2" column="5">
-           <widget class="QLineEdit" name="number_sequence_repetition_lineEdit"/>
-          </item>
-          <item row="0" column="1" colspan="2">
-           <widget class="QComboBox" name="dlp_mode_comboBox">
-            <item>
-             <property name="text">
-              <string>Static image</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>HDMI video</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>Pattern Sequence</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="3" column="3">
-           <widget class="QLabel" name="intervalle_between_sequences_label">
-            <property name="text">
-             <string>Intervalle between sequences</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="dlp_mode_label">
-            <property name="text">
-             <string>DLP mode</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="3">
-           <widget class="QLabel" name="number_of_sequence_repetition_label">
-            <property name="text">
-             <string>Number of  sequence repetition</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="5">
-           <widget class="QLineEdit" name="experiment_repetition_lineEdit"/>
-          </item>
-          <item row="4" column="1">
-           <widget class="QLineEdit" name="number_of_sequence_lineEdit"/>
-          </item>
-          <item row="2" column="1">
+          <item row="1" column="1">
            <widget class="QLineEdit" name="dlp_time_on_lineEdit"/>
           </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="dlp_time_off_label">
-            <property name="text">
-             <string>DLP time OFF</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
+          <item row="1" column="0">
            <widget class="QLabel" name="dlp_time_on_label">
             <property name="text">
              <string>DLP time ON</string>
             </property>
            </widget>
           </item>
+          <item row="1" column="3" rowspan="6" colspan="3">
+           <widget class="QLabel" name="protocol_image">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap>DLP_static_image.png</pixmap>
+            </property>
+           </widget>
+          </item>
           <item row="4" column="0">
+           <widget class="QLabel" name="number_of_sequence_repetition_label">
+            <property name="text">
+             <string>Number of  sequence repetition</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="number_sequence_repetition_lineEdit"/>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLineEdit" name="experiment_repetition_lineEdit"/>
+          </item>
+          <item row="3" column="0">
            <widget class="QLabel" name="number_of_sequence_label">
             <property name="text">
              <string>Number of sequence</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="1">
-           <widget class="QLineEdit" name="dlp_time_off_lineEdit"/>
+          <item row="2" column="0">
+           <widget class="QLabel" name="dlp_time_off_label">
+            <property name="text">
+             <string>DLP time OFF</string>
+            </property>
+           </widget>
           </item>
-          <item row="4" column="3">
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="number_of_sequence_lineEdit"/>
+          </item>
+          <item row="6" column="0">
            <widget class="QLabel" name="experiment_repetition_label">
             <property name="text">
              <string>Experiment repetitions</string>
             </property>
            </widget>
           </item>
-          <item row="3" column="5">
+          <item row="5" column="0">
+           <widget class="QLabel" name="intervalle_between_sequences_label">
+            <property name="text">
+             <string>Intervalle between sequences</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="dlp_time_off_lineEdit"/>
+          </item>
+          <item row="5" column="1">
            <widget class="QLineEdit" name="intervalle_between_sequences_lineEdit"/>
+          </item>
+          <item row="7" column="1" colspan="3">
+           <widget class="QPushButton" name="run_experiment_dlp_static_button">
+            <property name="text">
+             <string>Run Experiment</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="DLP_hdmi">
+         <attribute name="title">
+          <string>DLP_hdmi</string>
+         </attribute>
+         <layout class="QFormLayout" name="formLayout_2">
+          <item row="0" column="0">
+           <widget class="QLabel" name="start_video_sequence_label">
+            <property name="text">
+             <string>Start video sequence</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="start_video_sequence_lineEdit"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="number_of_repetition_label">
+            <property name="text">
+             <string>Number of repetition</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="number_of_repetition_lineEdit"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="delay_between_repetition_label">
+            <property name="text">
+             <string>Delay between repetition</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="delay_between_repetition_lineEdit"/>
+          </item>
+          <item row="3" column="1">
+           <widget class="QPushButton" name="run_experiment_dlp_hdmi_button">
+            <property name="text">
+             <string>Run Experiment</string>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>
@@ -143,13 +185,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="0" colspan="2" alignment="Qt::AlignVCenter">
-           <widget class="QProgressBar" name="scan_progress_progressBar">
-            <property name="value">
-             <number>24</number>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QPushButton" name="start_scan_pushButton">
             <property name="text">
@@ -157,22 +192,15 @@
             </property>
            </widget>
           </item>
+          <item row="1" column="0" colspan="2" alignment="Qt::AlignVCenter">
+           <widget class="QProgressBar" name="scan_progress_progressBar">
+            <property name="value">
+             <number>24</number>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
-       </widget>
-      </item>
-      <item row="0" column="2">
-       <widget class="QPushButton" name="export_experiment_button">
-        <property name="text">
-         <string>Export Experiment</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="4">
-       <widget class="QPushButton" name="run_experiment_button">
-        <property name="text">
-         <string>Run Experiment</string>
-        </property>
        </widget>
       </item>
       <item row="0" column="1">
