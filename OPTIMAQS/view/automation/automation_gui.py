@@ -20,6 +20,8 @@ from OPTIMAQS.utils.signals import Signals
 from OPTIMAQS.utils.worker import Worker
 from OPTIMAQS.utils.custom_sleep_function import custom_sleep_function
 from OPTIMAQS.utils.json_functions import jsonFunctions
+from OPTIMAQS.utils.debug import Pyqt_debugger
+
 
 ### View model imports
 from OPTIMAQS.view.camera.camera_gui import CameraGui
@@ -231,10 +233,9 @@ class AutomationGui(QWidget):
 
     def dlp_hdmi(self):
         ## getting value from automation gui
-        start_video_sequence = int(self.dlp_start_video_sequence_lineEdit.text())
-        
+        start_video_sequence = int(self.start_video_sequence_lineEdit.text())
         ## launching auto protocol
-        # self.laser_on()
+        self.laser_gui.laser_on()
         custom_sleep_function(1000)
         ## ON
         self.dlp_gui.display_mode(2)
@@ -242,8 +243,8 @@ class AutomationGui(QWidget):
         custom_sleep_function(2000) #TODO: estimate length of video instead
         ## OFF
         self.dlp_gui.turn_dlp_off()
+        self.laser_gui.laser_off()
         ## DELAY
-        custom_sleep_function(delay_between_repetition)
         self.camera_gui.camera_signal.finished.emit()
         self.dlp_gui.dlp_signal.finished.emit()
 
