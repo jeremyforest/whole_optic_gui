@@ -184,7 +184,7 @@ class AutomationGui(QWidget):
         ## lauching auto protocol
         for i in range(dlp_repeat_sequence):
             for j in range(dlp_sequence):
-#                self.laser_on()
+                self.laser_gui.laser_on()
                 custom_sleep_function(1000)
 #                if self.electrophysiology_gui.record_electrophysiological_trace_radioButton.isChecked():
 #                    self.electrophysiology_gui.ephy_stim_start()
@@ -198,7 +198,7 @@ class AutomationGui(QWidget):
                 self.dlp_gui.turn_dlp_off()
 #                self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
                 custom_sleep_function(dlp_off)
-#            self.laser_off()
+                self.laser_gui.laser_off()
             custom_sleep_function(dlp_interval)
         self.camera_gui.camera_signal.finished.emit()
 #        self.ephy_signal.finished.emit()
