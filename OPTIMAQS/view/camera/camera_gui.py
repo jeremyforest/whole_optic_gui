@@ -184,7 +184,7 @@ class CameraGui(QWidget):
                 self.image = self.images[0]  ## keeping only the 1st image for GUI display
                 self.image_reshaped = self.image.reshape(int((self.y_dim/self.bin_size)),
                                                         int(self.x_dim/self.bin_size))  ## image needs reshaping for show
-                print(f"Acquired {image_acquired} images")
+                # print(f"Acquired {image_acquired} images")
                 image_acquired += 1
                 if self.saving_check.isChecked(): ## for saving data after end of acquisition, uses less memory if no saving
                     for j in range(len(self.images)):

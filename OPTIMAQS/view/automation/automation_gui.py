@@ -42,8 +42,15 @@ class AutomationGui(QWidget):
         self.actions()
         self.threadpool = QThreadPool()
         
+        # Init path variables
+        if jsonFunctions.find_json('OPTIMAQS/config_files/path_init.json'):
+            self.path_init = self.set_main_path_from_config_file()
+        else:   
+            self.path_init = self.set_main_path_from_user_input()
+        
         self.path = jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
         self.path_experiment = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
+        self.initialize_experiment()
 
         ## can there be a better way than having automation on top of main ?
         self.dlp_gui = DLPGui()
@@ -54,15 +61,6 @@ class AutomationGui(QWidget):
         self.laser_gui.setGeometry(1200, 250, 500, 100)
 #        self.controller_gui = ControllerGui
 #        self.electrophysiology_gui = ElectrophysiologyGui()
-
-        ## Init path variables
-        if jsonFunctions.find_json('OPTIMAQS/config_files/path_init.json'):
-            self.path_init = self.set_main_path_from_config_file()
-        else:   
-            self.path_init = self.set_main_path_from_user_input()
-            
-        self.path = None
-        self.path_raw_data = None
 
 
     def set_main_path_from_config_file(self):
@@ -85,7 +83,6 @@ class AutomationGui(QWidget):
         self.end_experiment_function.finished.connect(self.end_experiment)
 
 
-
     def initialize_experiment(self):
         """
         Initialize/Reinitilize experiment logfiles and variables
@@ -97,6 +94,7 @@ class AutomationGui(QWidget):
         self.image_list = []
         self.image_reshaped = []
         self.ephy_data = []
+        self.run_nb = 0
 
         ## init perf_counter for timing events
         self.perf_counter_init = time.perf_counter()
@@ -214,7 +212,6 @@ class AutomationGui(QWidget):
             self.run_experiment_dlp_static_image()
 
     def run_experiment_dlp_static_image(self):
-        self.initialize_experiment()
         dlp_worker = Worker(self.dlp_static_image)
 #        ephy_worker = Worker(self.ephy_recording_thread)
         self.camera_gui.stream()
@@ -231,19 +228,29 @@ class AutomationGui(QWidget):
 #                QApplication.processEvents()
 
 
+    def dlp_hdmi_video_gen(self):
+        # getting value from automation gui to create video
+        print('generating video for hdmi display')
+        duration_of_each_image_stimulus = int(self.duration_of_each_image_stimulus_lineEdit.text())
+        time_between_stimulus_image = int(self.time_between_stimulus_image_lineEdit.text())
+        
+        #TODO: other way to do that? To Simplify and reuse function in dlp_gui ? 
+        self.info_logfile_dict = jsonFunctions.open_json(self.info_logfile_path)
+        self.roi_list = self.info_logfile_dict['roi']
+        self.dlp_gui.generate_one_image_per_roi(self.roi_list)
+        self.dlp_gui.movie_from_images(time_stim_image=duration_of_each_image_stimulus, 
+                                       inter_image_interval=time_between_stimulus_image)
+
     def dlp_hdmi(self):
-        ## getting value from automation gui
-        start_video_sequence = int(self.start_video_sequence_lineEdit.text())
-        ## launching auto protocol
-        self.laser_gui.laser_on()
-        custom_sleep_function(1000)
+        #self.laser_gui.laser_on()
+        custom_sleep_function(100)
         ## ON
         self.dlp_gui.display_mode(2)
         self.dlp_gui.choose_action(1)
         custom_sleep_function(2000) #TODO: estimate length of video instead
         ## OFF
         self.dlp_gui.turn_dlp_off()
-        self.laser_gui.laser_off()
+        #self.laser_gui.laser_off()
         ## DELAY
         self.camera_gui.camera_signal.finished.emit()
         self.dlp_gui.dlp_signal.finished.emit()
@@ -252,14 +259,19 @@ class AutomationGui(QWidget):
         number_of_repetition = int(self.number_of_repetition_lineEdit.text())
         delay_between_repetition = int(self.delay_between_repetition_lineEdit.text())
         for i in range(number_of_repetition):
-            self.dlp_hdmi()
+            self.run_experiment_dlp_hdmi()
+            custom_sleep_function(delay_between_repetition)
             
     def run_experiment_dlp_hdmi(self):
+        Pyqt_debugger.debug_trace()
+        if self.run_nb == 0:
+            self.dlp_hdmi_video_gen()
         dlp_worker = Worker(self.dlp_hdmi)
         self.camera_gui.stream()
         custom_sleep_function(2000)
         self.threadpool.start(dlp_worker)  
         self.recording = True
+        self.run_nb += 1
         
     def export_experiment(self):
         self.info_logfile_dict['roi'].append(self.roi_list)
