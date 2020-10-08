@@ -291,6 +291,7 @@ class dm365():
 	###################################
 	def setModeToHDMIVideo(self):
 	    """Setting the display mode to HDMI Mode"""
+	    print('Display HDMI video')
 	    currentPacket = []
 	    currentPacket = b'\x02\x01\x01\x00\x01\x00\x02\x07'
 	    ans = self.sendData(currentPacket)
