@@ -247,7 +247,7 @@ class AutomationGui(QWidget):
         ## ON
         self.dlp_gui.display_mode(2)
         self.dlp_gui.choose_action(1)
-        custom_sleep_function(2000) #TODO: estimate length of video instead
+        custom_sleep_function(10000) #TODO: estimate length of video instead
         ## OFF
         self.dlp_gui.turn_dlp_off()
         #self.laser_gui.laser_off()
@@ -263,13 +263,12 @@ class AutomationGui(QWidget):
             custom_sleep_function(delay_between_repetition)
             
     def run_experiment_dlp_hdmi(self):
-        Pyqt_debugger.debug_trace()
         if self.run_nb == 0:
             self.dlp_hdmi_video_gen()
-        dlp_worker = Worker(self.dlp_hdmi)
+        dlp_hdmi_worker = Worker(self.dlp_hdmi)
         self.camera_gui.stream()
         custom_sleep_function(2000)
-        self.threadpool.start(dlp_worker)  
+        self.threadpool.start(dlp_hdmi_worker)  
         self.recording = True
         self.run_nb += 1
         
