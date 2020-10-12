@@ -197,7 +197,7 @@ class DLPGui(QWidget):
 
         return self.camera_to_dlp_matrix
 
-    def display_mode(self, index):  ## can this be implemented in QDesigner ?
+    def display_mode(self, index):  #TODO:can this be implemented in QDesigner directly  ?
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
             self.dlp.set_display_mode('static')
