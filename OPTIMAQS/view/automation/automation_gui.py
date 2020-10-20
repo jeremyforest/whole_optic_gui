@@ -240,7 +240,9 @@ class AutomationGui(QWidget):
         self.dlp_gui.generate_one_image_per_roi(self.roi_list)
         self.dlp_gui.movie_from_images(time_stim_image=duration_of_each_image_stimulus, 
                                        inter_image_interval=time_between_stimulus_image)
-
+        # self.dlp_gui.generate_every_paired_combination_movie(self.roi_list,
+        #                                                      time_stim_image = duration_of_each_image_stimulus, 
+        #                                                      inter_image_interval = time_between_stimulus_image)
     def dlp_hdmi(self):
         #self.laser_gui.laser_on()
         custom_sleep_function(100)

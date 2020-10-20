@@ -345,6 +345,7 @@ class DLPGui(QWidget):
                 self.generate_one_image_per_roi(self.roi_list)
                 time.sleep(5)
                 self.movie_from_images()
+                # self.generate_every_paired_combination_movie(self.roi_list)
             elif index == 1: ## Choose HDMI Video Sequence
                 ## is the screen number working ? neede to test with dlp screen. shouhld work if dlp is screen 1
                 run_vlc_worker = Worker(self.run_vlc)
@@ -394,24 +395,19 @@ class DLPGui(QWidget):
             cv2.imwrite(self.path + '/dlp_images' + '/ROI_warped_' + f"{nb}" + '.bmp', black_image_with_ROI_warped_flipped)
 
 
-
-
-
     def generate_every_paired_combination_movie(self,
                                                 roi_list,
                                                 time_stim_image=20,
                                                 inter_image_interval=200):
+        Pyqt_debugger.debug_trace()
         filenames = os.listdir(f"{self.path}/dlp_images/")
-        # filenames = os.listdir('/run/user/1000/gvfs/afp-volume:host=Home.local,user=jeremy,volume=homes/jeremy/Recherches/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/data/2020_10_07/experiment_2/dlp_images')
         size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
-        # size_image = cv2.imread(f'/run/user/1000/gvfs/afp-volume:host=Home.local,user=jeremy,volume=homes/jeremy/Recherches/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/data/2020_10_07/experiment_2/dlp_images/{filenames[1]}')
         h, v, z = size_image.shape
         fps = 1000
         repeat_stim_image = int(time_stim_image/1000 * fps)
         repeat_black_image = int(inter_image_interval/1000 * fps)
 
-        nb_roi = len(roi_list[0])
-        # nb_roi = range(3)
+        nb_roi = range(len(roi_list[0]))
         paired_combinations = list(itertools.combinations(nb_roi, 2))
 
         out = cv2.VideoWriter(f"{self.path}/dlp_images/dlp_movie_paired_combination.avi",
@@ -428,8 +424,8 @@ class DLPGui(QWidget):
             filenames_repeat.append(np.array(filenames_repeat_temp).flatten().flatten())
         filenames_repeat = np.array(filenames_repeat).flatten()
 
-
-        idx_insert = np.arange(0, len(paired_combinations), repeat_stim_image)
+        idx_insert = np.arange(0, len(filenames_repeat), repeat_stim_image*2) 
+        # idx_insert = np.arange(0, len(paired_combinations), repeat_stim_image)
         black_images = ['b']*repeat_black_image
 
         for i in idx_insert[::-1]:
@@ -441,8 +437,13 @@ class DLPGui(QWidget):
                 filenames_for_videos = np.insert(filenames_for_videos,
                                                  i,
                                                  np.array(black_images))
-
-
+        for filename in filenames_for_videos:
+            if filename == 'b':
+                img = np.uint8(np.zeros((h,v,z)))
+            else:
+                img = cv2.imread(f"{self.path}/dlp_images/{filename}")
+            out.write(img)
+        out.release()
 
 
     def movie_from_images(self, time_stim_image=25, inter_image_interval=100):
