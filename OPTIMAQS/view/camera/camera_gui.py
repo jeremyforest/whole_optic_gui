@@ -30,7 +30,7 @@ class CameraGui(QWidget):
         Initialize the ui and load the camera functions
         """
         super().__init__()
-        
+
         ## GUI related
         self.camera_ui = uic.loadUi('OPTIMAQS/view/camera/camera.ui', self)
         self.camera_ui.show()
@@ -57,7 +57,7 @@ class CameraGui(QWidget):
         self.perf_counter_init = jsonFunctions.open_json(
                                 'OPTIMAQS/config_files/perf_counter_init.json')
 
-        #import camera related log variables. Another way to do that ? 
+        #import camera related log variables. Another way to do that ?
         self.info_logfile_path = self.path_experiment + '/experiment_' + \
                                  self.path_experiment[-1] + '_info.json'
         self.info_logfile_dict = {}
@@ -246,12 +246,11 @@ class CameraGui(QWidget):
         self.ROI_label_placeholder.setText(str(0))
 
     def save(self, images, path): ### npy format
+        print('saving files ... ')
         for i in range(len(images)):
             image = images[i]
-            # np.save(file = str(path) + '/image{}.npy'.format(str(i)), arr=image)
-            # print(f'{str(path)}/image{str(i).zfill(5)}.npy')
             np.save(file = f'{str(path)}/image{str(i).zfill(5)}.npy', arr=image)
-            print("saved file")
+        print("saved files")
 
     def replay(self):
         if self.path == None:
