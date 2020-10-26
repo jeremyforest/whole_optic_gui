@@ -52,20 +52,20 @@ class MainWindow(QMainWindow):
         self.activate_controller = False
         self.activate_automation = False
         self.activate_electrophysiology = False
-        
+
         ## Init path variables
         if jsonFunctions.find_json('OPTIMAQS/config_files/path_init.json'):
             self.path_init = self.set_main_path_from_config_file()
-        else:   
+        else:
             self.path_init = self.set_main_path_from_user_input()
-            
+
         self.path = None
         self.path_raw_data = None
 
 #        self.threadpool = QThreadPool()
 #        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-        
-        
+
+
 
     def menu_bar(self):
         """
@@ -83,6 +83,8 @@ class MainWindow(QMainWindow):
         self.actionElectrophysiology.triggered.connect(self.load_electrophysiology)
         ## Config
         self.actionChange_default_path.triggered.connect(self.set_main_path_from_user_input)
+        ##Analysis
+        self.actionNetwork_connections.triggered.connect(self.networkConnections)
 
     def actions(self):
         """
@@ -182,23 +184,23 @@ class MainWindow(QMainWindow):
 
     def set_main_path_from_config_file(self):
         """
-        Set the main path of the experiment from the path saved in the 
-        path_init config file. 
+        Set the main path of the experiment from the path saved in the
+        path_init config file.
         """
         return jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
-    
+
     def save_main_path_to_config_file(self):
         """
         Save the path_init variable in the path_init config file
         """
         return jsonFunctions.write_to_json(self.path_init, 'OPTIMAQS/config_files/path_init.json')
-        
+
     def set_main_path_from_user_input(self):
         """
         Set the path_init variable from user input and save it in the path_init
         config file
         """
-        self.path_init = QFileDialog.getExistingDirectory(None, 
+        self.path_init = QFileDialog.getExistingDirectory(None,
                                           'Select the folder you want the path to change to:',
                                           'C:/', QFileDialog.ShowDirsOnly)
         jsonFunctions.write_to_json(self.path_init, 'OPTIMAQS/config_files/path_init.json')
@@ -252,7 +254,7 @@ class MainWindow(QMainWindow):
 
         ## generate log files
         self.info_logfile_path = self.path + "/experiment_{}_info.json".format(n)
-        experiment_time = time.asctime(time.localtime(time.time())) 
+        experiment_time = time.asctime(time.localtime(time.time()))
         self.info_logfile_dict['experiment creation date'] = experiment_time
 #        with open(self.info_logfile_path,"w+") as file:       ## store basic info and comments
 #            json.dump(self.info_logfile_dict, file)
@@ -264,6 +266,33 @@ class MainWindow(QMainWindow):
         jsonFunctions.write_to_json(self.timings_logfile_dict, self.timings_logfile_path)
 
         self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI
+
+    def networkConnections(self):
+        """
+        Will run the merging_experiemnt script of the analysis pipeline to
+        perform averaging of neuronal network activation and see which neurons
+        are linked to the stimulated neuron(s)
+        """
+        experiment_start = QtWidgets.QInputDialog.getInt(
+                            self, 'Input Dialog',
+                            'Number of the experiment to start averaging from:')
+        experiment_end = QtWidgets.QInputDialog.getInt(
+                            self, 'Input Dialog',
+                            'Number of the experiment to end the averaging:')
+        merging = 'python merging_experiments.py'
+        convert_to_image = 'python convert_npy_to_png.py'
+        subprocess.call([merging,   f'--main_folder_path {self.path}',
+                                f'--experiments {experiment_start}',
+                                f'--experiments {experiment_end}',
+                                '--estimate_connections'])
+        subprocess.call([convert_to_image,
+                        f'experiment_merged_{experiment_start}_{experiment_end}_manual',
+                        f'{self.path}')
+
+
+
+
+
 
     def bye(self):
         """

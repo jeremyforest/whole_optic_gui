@@ -76,7 +76,7 @@
      <x>0</x>
      <y>0</y>
      <width>803</width>
-     <height>21</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">
@@ -104,9 +104,16 @@
     </property>
     <addaction name="actionChange_default_path"/>
    </widget>
+   <widget class="QMenu" name="menuAnalysis">
+    <property name="title">
+     <string>Analysis</string>
+    </property>
+    <addaction name="actionNetowrk_connections"/>
+   </widget>
    <addaction name="menuMenu"/>
    <addaction name="menuLoad_Modules"/>
    <addaction name="menuConfig"/>
+   <addaction name="menuAnalysis"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="actionCamera">
@@ -152,6 +159,11 @@
   <action name="actionInitialize_experiment">
    <property name="text">
     <string>Initialize experiment</string>
+   </property>
+  </action>
+  <action name="actionNetowrk_connections">
+   <property name="text">
+    <string>Network connections</string>
    </property>
   </action>
  </widget>
