@@ -244,7 +244,7 @@ class AutomationGui(QWidget):
         #                                                      time_stim_image = duration_of_each_image_stimulus, 
         #                                                      inter_image_interval = time_between_stimulus_image)
     def dlp_hdmi(self):
-        #self.laser_gui.laser_on()
+        self.laser_gui.laser_on()
         custom_sleep_function(100)
         ## ON
         self.dlp_gui.display_mode(2)
@@ -252,7 +252,7 @@ class AutomationGui(QWidget):
         custom_sleep_function(10000) #TODO: estimate length of video instead
         ## OFF
         self.dlp_gui.turn_dlp_off()
-        #self.laser_gui.laser_off()
+        self.laser_gui.laser_off()
         ## DELAY
         self.camera_gui.camera_signal.finished.emit()
         self.dlp_gui.dlp_signal.finished.emit()

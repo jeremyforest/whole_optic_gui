@@ -84,7 +84,7 @@ class MainWindow(QMainWindow):
         ## Config
         self.actionChange_default_path.triggered.connect(self.set_main_path_from_user_input)
         ##Analysis
-        self.actionNetwork_connections.triggered.connect(self.networkConnections)
+#        self.actionNetwork_connections.triggered.connect(self.networkConnections)
 
     def actions(self):
         """
@@ -267,27 +267,27 @@ class MainWindow(QMainWindow):
 
         self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI
 
-    def networkConnections(self):
-        """
-        Will run the merging_experiemnt script of the analysis pipeline to
-        perform averaging of neuronal network activation and see which neurons
-        are linked to the stimulated neuron(s)
-        """
-        experiment_start = QtWidgets.QInputDialog.getInt(
-                            self, 'Input Dialog',
-                            'Number of the experiment to start averaging from:')
-        experiment_end = QtWidgets.QInputDialog.getInt(
-                            self, 'Input Dialog',
-                            'Number of the experiment to end the averaging:')
-        merging = 'python merging_experiments.py'
-        convert_to_image = 'python convert_npy_to_png.py'
-        subprocess.call([merging,   f'--main_folder_path {self.path}',
-                                f'--experiments {experiment_start}',
-                                f'--experiments {experiment_end}',
-                                '--estimate_connections'])
-        subprocess.call([convert_to_image,
-                        f'experiment_merged_{experiment_start}_{experiment_end}_manual',
-                        f'{self.path}')
+#    def networkConnections(self):
+#        """
+#        Will run the merging_experiemnt script of the analysis pipeline to
+#        perform averaging of neuronal network activation and see which neurons
+#        are linked to the stimulated neuron(s)
+#        """
+#        experiment_start = QtWidgets.QInputDialog.getInt(
+#                            self, 'Input Dialog',
+#                            'Number of the experiment to start averaging from:')
+#        experiment_end = QtWidgets.QInputDialog.getInt(
+#                            self, 'Input Dialog',
+#                            'Number of the experiment to end the averaging:')
+#        merging = 'python merging_experiments.py'
+#        convert_to_image = 'python convert_npy_to_png.py'
+#        subprocess.call([merging,   f'--main_folder_path {self.path}',
+#                                f'--experiments {experiment_start}',
+#                                f'--experiments {experiment_end}',
+#                                '--estimate_connections'])
+#        subprocess.call([convert_to_image,
+#                        f'experiment_merged_{experiment_start}_{experiment_end}_manual',
+#                        f'{self.path}')
 
 
 
