@@ -61,10 +61,9 @@ class MainWindow(QMainWindow):
 
         self.path = None
         self.path_raw_data = None
+        self.n_experiment = 1
 
-#        self.threadpool = QThreadPool()
-#        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-
+        self.initialize_experiment()
 
 
     def menu_bar(self):
@@ -98,7 +97,10 @@ class MainWindow(QMainWindow):
         Load the camera view
         """
         print("loading camera module")
-        self.camera_gui = CameraGui()
+        self.camera_gui = CameraGui(path = self.path,
+                                    path_raw_data = self.path_raw_data,
+                                    info_logfile_path = self.info_logfile_path,
+                                    timings_logfile_path = self.timings_logfile_path)
         self.camera_gui.setGeometry(100, 30, 200, 900)
         self.activate_camera = True
 
@@ -107,7 +109,8 @@ class MainWindow(QMainWindow):
         Load the laser view
         """
         print("loading laser module")
-        self.laser_gui = LaserGui()
+        self.laser_gui = LaserGui(info_logfile_path = self.info_logfile_path,
+                                  timings_logfile_path = self.timings_logfile_path)
         self.laser_gui.setGeometry(1200, 250, 500, 100)
         self.activate_laser = True
 
@@ -116,7 +119,8 @@ class MainWindow(QMainWindow):
         Load the dlp view
         """
         print("loading DLP module")
-        self.dlp_gui = DLPGui()
+        self.dlp_gui = DLPGui(info_logfile_path = self.info_logfile_path,
+                              timings_logfile_path = self.timings_logfile_path)
         self.dlp_gui.setGeometry(1200, 400, 500, 100)
         self.activate_dlp = True
 
@@ -133,7 +137,8 @@ class MainWindow(QMainWindow):
         Load the automation view
         """
         print("loading Automation module")
-        self.automation_gui = AutomationGui()
+        self.automation_gui = AutomationGui(info_logfile_path = self.info_logfile_path,
+                                            timings_logfile_path = self.timings_logfile_path)
         self.automation_gui.setGeometry(1200, 700, 500, 100)
         self.activate_automation = True
 
@@ -152,13 +157,13 @@ class MainWindow(QMainWindow):
         """
         ## initilizing dict for timings
         self.timings_logfile_dict = {}
-        self.timings_logfile_dict['timer_init'] = {}
-        self.timings_logfile_dict['timer_init']['main'] = []
-        self.timings_logfile_dict['timer_init']['camera'] = []
-        self.timings_logfile_dict['timer_init']['dlp'] = []
-        self.timings_logfile_dict['timer_init']['laser'] = []
-        self.timings_logfile_dict['timer_init']['ephy'] = []
-        self.timings_logfile_dict['timer_init']['ephy_stim'] = [] # do I need this one ?
+#        self.timings_logfile_dict['timer_init'] = {}
+#        self.timings_logfile_dict['timer_init']['main'] = []
+#        self.timings_logfile_dict['timer_init']['camera'] = []
+#        self.timings_logfile_dict['timer_init']['dlp'] = []
+#        self.timings_logfile_dict['timer_init']['laser'] = []
+#        self.timings_logfile_dict['timer_init']['ephy'] = []
+#        self.timings_logfile_dict['timer_init']['ephy_stim'] = [] # do I need this one ?
         self.timings_logfile_dict['laser'] = {}
         self.timings_logfile_dict['laser']['on'] = []
         self.timings_logfile_dict['laser']['off'] = []
@@ -217,6 +222,10 @@ class MainWindow(QMainWindow):
         jsonFunctions.write_to_json(self.path, 'OPTIMAQS/config_files/last_experiment.json')
 
 
+#    def initialize_experiment(self):
+#        self.load_automation()
+#        self.automation_gui.initialize_experiment()
+
     def initialize_experiment(self):
         """
         Initialize/Reinitilize experiment logfiles and variables
@@ -228,10 +237,12 @@ class MainWindow(QMainWindow):
         self.image_list = []
         self.image_reshaped = []
         self.ephy_data = []
+        self.run_nb = 0
 
         ## init perf_counter for timing events
         self.perf_counter_init = time.perf_counter()
-        jsonFunctions.write_to_json(self.perf_counter_init, 'OPTIMAQS/config_files/perf_counter_init.json')
+        jsonFunctions.write_to_json(self.perf_counter_init, 
+                                    'OPTIMAQS/config_files/perf_counter_init.json')
 
         ## generate folder to save the data
         self.path = self.path_init
@@ -240,11 +251,10 @@ class MainWindow(QMainWindow):
         self.path = os.path.join(self.path, date)
         if not os.path.exists(self.path):
             os.makedirs(self.path) ## make a folder with the date of today if it does not already exists
-        n = 1
-        self.path_temp = os.path.join(self.path, 'experiment_' + str(n))  ## in case of multiple experiments a day, need to create several subdirectory
+        self.path_temp = os.path.join(self.path, 'experiment_' + str(self.n_experiment))  ## in case of multiple experiments a day, need to create several subdirectory
         while os.path.exists(self.path_temp):                             ## but necesarry to check which one aleady exists
-            n += 1
-            self.path_temp = os.path.join(self.path, 'experiment_' + str(n))
+            self.n_experiment += 1
+            self.path_temp = os.path.join(self.path, 'experiment_' + str(self.n_experiment))
         self.path = self.path_temp
         self.path_raw_data = self.path + '\\raw_data'
         os.makedirs(self.path)
@@ -253,19 +263,74 @@ class MainWindow(QMainWindow):
         jsonFunctions.write_to_json(self.path, 'OPTIMAQS/config_files/last_experiment.json')
 
         ## generate log files
-        self.info_logfile_path = self.path + "/experiment_{}_info.json".format(n)
-        experiment_time = time.asctime(time.localtime(time.time()))
+        self.info_logfile_path = self.path + "/experiment_{}_info.json".format(self.n_experiment)
+        experiment_time = time.asctime(time.localtime(time.time())) 
         self.info_logfile_dict['experiment creation date'] = experiment_time
 #        with open(self.info_logfile_path,"w+") as file:       ## store basic info and comments
 #            json.dump(self.info_logfile_dict, file)
         jsonFunctions.write_to_json(self.info_logfile_dict, self.info_logfile_path)
 
-        self.timings_logfile_path = self.path + "/experiment_{}_timings.json".format(n)
+        self.timings_logfile_path = self.path + "/experiment_{}_timings.json".format(self.n_experiment)
 #        with open(self.timings_logfile_path, "w+") as file:
 #            json.dump(self.timings_logfile_dict, file)
         jsonFunctions.write_to_json(self.timings_logfile_dict, self.timings_logfile_path)
 
         self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI
+        
+        
+        if self.activate_automation:
+            self.automation_gui.reset(self.info_logfile_path, self.timings_logfile_path,
+                                      self.path)
+
+#    def initialize_experiment(self):
+#        """
+#        Initialize/Reinitilize experiment logfiles and variables
+#        """
+#        ## reinitilize JSON files
+#        self.init_log_dict()
+#
+#        self.images = []
+#        self.image_list = []
+#        self.image_reshaped = []
+#        self.ephy_data = []
+#
+#        ## init perf_counter for timing events
+#        self.perf_counter_init = time.perf_counter()
+#        jsonFunctions.write_to_json(self.perf_counter_init, 'OPTIMAQS/config_files/perf_counter_init.json')
+#
+#        ## generate folder to save the data
+#        self.path = self.path_init
+#        self.path_raw_data = self.path + '\\raw_data'
+#        date = time.strftime("%Y_%m_%d")
+#        self.path = os.path.join(self.path, date)
+#        if not os.path.exists(self.path):
+#            os.makedirs(self.path) ## make a folder with the date of today if it does not already exists
+#        n = 1
+#        self.path_temp = os.path.join(self.path, 'experiment_' + str(n))  ## in case of multiple experiments a day, need to create several subdirectory
+#        while os.path.exists(self.path_temp):                             ## but necesarry to check which one aleady exists
+#            n += 1
+#            self.path_temp = os.path.join(self.path, 'experiment_' + str(n))
+#        self.path = self.path_temp
+#        self.path_raw_data = self.path + '\\raw_data'
+#        os.makedirs(self.path)
+#        os.makedirs(self.path + '\\dlp_images')
+#        os.makedirs(self.path + '\\raw_data')
+#        jsonFunctions.write_to_json(self.path, 'OPTIMAQS/config_files/last_experiment.json')
+#
+#        ## generate log files
+#        self.info_logfile_path = self.path + "/experiment_{}_info.json".format(n)
+#        experiment_time = time.asctime(time.localtime(time.time()))
+#        self.info_logfile_dict['experiment creation date'] = experiment_time
+##        with open(self.info_logfile_path,"w+") as file:       ## store basic info and comments
+##            json.dump(self.info_logfile_dict, file)
+#        jsonFunctions.write_to_json(self.info_logfile_dict, self.info_logfile_path)
+#
+#        self.timings_logfile_path = self.path + "/experiment_{}_timings.json".format(n)
+##        with open(self.timings_logfile_path, "w+") as file:
+##            json.dump(self.timings_logfile_dict, file)
+#        jsonFunctions.write_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+#
+#        self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI
 
 #    def networkConnections(self):
 #        """

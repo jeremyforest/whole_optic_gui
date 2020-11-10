@@ -25,7 +25,8 @@ class CameraGui(QWidget):
     """
     GUI for the camera
     """
-    def __init__(self):
+    def __init__(self, path=None, path_raw_data=None, 
+                 info_logfile_path=None, timings_logfile_path=None):
         """
         Initialize the ui and load the camera functions
         """
@@ -39,6 +40,10 @@ class CameraGui(QWidget):
         self.initialize_camera_parameters()
         self.actions()
         self.threadpool = QThreadPool()
+
+        
+        self.info_logfile_path = info_logfile_path
+        self.timings_logfile_path = timings_logfile_path 
 
         self.path_init = jsonFunctions.open_json(
                                         'OPTIMAQS/config_files/path_init.json')
@@ -58,16 +63,18 @@ class CameraGui(QWidget):
                                 'OPTIMAQS/config_files/perf_counter_init.json')
 
         #import camera related log variables. Another way to do that ?
-        self.info_logfile_path = self.path_experiment + '/experiment_' + \
-                                 self.path_experiment[-1] + '_info.json'
+#        self.info_logfile_path = self.path_experiment + '/experiment_' + \
+#                                 self.path_experiment[-1] + '_info.json'
+        self.info_logfile_path = info_logfile_path
         self.info_logfile_dict = {}
         self.info_logfile_dict['roi'] = []
         self.info_logfile_dict['exposure time'] = []
         self.info_logfile_dict['binning'] = []
         self.info_logfile_dict['fov'] = []
         self.info_logfile_dict['fps'] = []
-        self.timings_logfile_path = self.path_experiment + '/experiment_' + \
-                                    self.path_experiment[-1] + '_timings.json'
+#        self.timings_logfile_path = self.path_experiment + '/experiment_' + \
+#                                    self.path_experiment[-1] + '_timings.json'
+        self.timings_logfile_path = timings_logfile_path
         self.timings_logfile_dict = {}
         self.timings_logfile_dict['camera'] = []
         self.timings_logfile_dict['camera_bis'] = []
@@ -137,6 +144,30 @@ class CameraGui(QWidget):
         self.saved_ROI_image.ui.menuBtn.hide()
         self.export_ROI_button.clicked.connect(self.export_roi)
 
+    def reset(self, timings_logfile_path, info_logfile_path, path_experiment):
+
+        self.info_logfile_path = info_logfile_path
+        self.info_logfile_dict = {}
+        self.info_logfile_dict['roi'] = []
+        self.info_logfile_dict['exposure time'] = []
+        self.info_logfile_dict['binning'] = []
+        self.info_logfile_dict['fov'] = []
+        self.info_logfile_dict['fps'] = []
+
+        self.timings_logfile_path = timings_logfile_path
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['camera'] = []
+        self.timings_logfile_dict['camera_bis'] = []
+
+        self.path_experiment = path_experiment
+        self.path_raw_data = self.path_experiment + '\\raw_data'
+
+        self.images = []
+        self.image_list = []
+        self.image_reshaped = []
+#        self.roi_list = [] do i need to reset this here ? 
+        self.times_bis=[]
+    
     def save_as_png(self, array, image_name):
         plt.imsave('{}{}.png'.format(self.path_experiment, image_name), array, cmap='gray')
 
@@ -210,9 +241,9 @@ class CameraGui(QWidget):
             #save_images_worker.signals.progress.connect(self.progress_fn)
             self.threadpool.start(save_images_worker)
             ## saving images times
-            jsonFunctions.write_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+            jsonFunctions.append_to_json(self.timings_logfile_dict, self.timings_logfile_path)
             ## saving experiment info
-            self.info_logfile_dict['roi'].append(self.roi_list)
+            #self.info_logfile_dict['roi'].append(self.roi_list) ##this is doe in export roi
             self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())
             self.info_logfile_dict['binning'].append(self.bin_size)
             self.info_logfile_dict['fps'].append(self.internal_frame_rate)
@@ -250,7 +281,7 @@ class CameraGui(QWidget):
         for i in range(len(images)):
             image = images[i]
             np.save(file = f'{str(path)}/image{str(i).zfill(5)}.npy', arr=image)
-        print("saved files")
+        print("saved files in " + str(path))
 
     def replay(self):
         if self.path == None:

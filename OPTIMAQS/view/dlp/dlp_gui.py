@@ -25,7 +25,7 @@ from OPTIMAQS.utils.debug import Pyqt_debugger
 
 
 class DLPGui(QWidget):
-    def __init__(self):
+    def __init__(self, info_logfile_path=None, timings_logfile_path=None):
         """
         GUI for the Digital Light Processor / Digital Micromirror Device
         """
@@ -48,11 +48,13 @@ class DLPGui(QWidget):
         self.calibration()
 
         ## JSON files
-        self.info_logfile_path = self.path + '/experiment_' + self.path[-1] + '_info.json'
+#        self.info_logfile_path = self.path + '/experiment_' + self.path[-1] + '_info.json'
+        self.info_logfile_path = info_logfile_path
         self.info_logfile_dict = {}
         self.info_logfile_dict['roi'] = []
 
-        self.timings_logfile_path = self.path + '/experiment_' + self.path  [-1] + '_timings.json'
+#        self.timings_logfile_path = self.path + '/experiment_' + self.path  [-1] + '_timings.json'
+        self.timings_logfile_path = timings_logfile_path
         self.timings_logfile_dict = {}
         self.timings_logfile_dict['dlp'] = {}
         self.timings_logfile_dict['dlp']['on'] = []
@@ -92,6 +94,17 @@ class DLPGui(QWidget):
         self.display_mode_subbox_combobox.activated.connect(self.choose_action)
         self.calibration_button.clicked.connect(self.calibration)
 
+    def reset(self, timings_logfile_path, info_logfile_path):
+        self.info_logfile_path = info_logfile_path
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['dlp'] = {}
+        self.timings_logfile_dict['dlp']['on'] = []
+        self.timings_logfile_dict['dlp']['off'] = []
+        
+        self.timings_logfile_path = timings_logfile_path
+        self.info_logfile_dict = {}
+        self.info_logfile_dict['roi'] = []
+        
     def calibration(self):
         if os.path.isfile(self.calibration_dlp_camera_matrix_path):
             print('Calibration matrix already exists, using it as reference')
@@ -371,12 +384,14 @@ class DLPGui(QWidget):
         vlc_path = "C:\\Program Files (x86)\\VideoLAN\\VLC\\vlc.exe"
         video_path = f"{self.path}/dlp_images/dlp_movie.avi"
         subprocess.call([vlc_path, '--play-and-exit', '-f', '--qt-fullscreen-screennumber=4|5', os.path.abspath(video_path)], shell=False)
+        self.timings_logfile_dict['dlp']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
 
 
     def turn_dlp_off(self):
         self.dlp.set_display_mode('internal')
         self.dlp.black()
         self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
+        jsonFunctions.append_to_json(self.timings_logfile_dict, self.timings_logfile_path)
         print('dlp end signal received')
 
     def generate_one_image_per_roi(self, roi_list):
@@ -399,7 +414,6 @@ class DLPGui(QWidget):
                                                 roi_list,
                                                 time_stim_image=20,
                                                 inter_image_interval=200):
-        Pyqt_debugger.debug_trace()
         filenames = os.listdir(f"{self.path}/dlp_images/")
         size_image = cv2.imread(f"{self.path}/dlp_images/{filenames[1]}")
         h, v, z = size_image.shape

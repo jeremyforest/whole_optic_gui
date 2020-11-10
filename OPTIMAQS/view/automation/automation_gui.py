@@ -34,13 +34,15 @@ from OPTIMAQS.view.electrophysiology.electrophysiology_gui import Electrophysiol
 
 
 class AutomationGui(QWidget):
-    def __init__(self):
+    def __init__(self, info_logfile_path, timings_logfile_path):
         super(AutomationGui, self).__init__()
         self.automation_ui = uic.loadUi('OPTIMAQS/view/automation/automation.ui', self)
         self.automation_ui.show()
         
         self.actions()
         self.threadpool = QThreadPool()
+        
+        self.n_experiment = 1
         
         # Init path variables
         if jsonFunctions.find_json('OPTIMAQS/config_files/path_init.json'):
@@ -50,18 +52,12 @@ class AutomationGui(QWidget):
         
         self.path = jsonFunctions.open_json('OPTIMAQS/config_files/path_init.json')
         self.path_experiment = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
-        self.initialize_experiment()
-
-        ## can there be a better way than having automation on top of main ?
-        self.dlp_gui = DLPGui()
-        self.dlp_gui.setGeometry(1200, 400, 500, 100)
-        self.camera_gui = CameraGui()
-        self.camera_gui.setGeometry(100, 30, 200, 900)
-        self.laser_gui = LaserGui()
-        self.laser_gui.setGeometry(1200, 250, 500, 100)
-#        self.controller_gui = ControllerGui
-#        self.electrophysiology_gui = ElectrophysiologyGui()
-
+        #self.initialize_experiment()
+        
+        self.info_logfile_path = info_logfile_path
+        self.timings_logfile_path = timings_logfile_path 
+        
+        self.load_modules()
 
     def set_main_path_from_config_file(self):
         """
@@ -83,93 +79,134 @@ class AutomationGui(QWidget):
         self.end_experiment_function.finished.connect(self.end_experiment)
 
 
-    def initialize_experiment(self):
-        """
-        Initialize/Reinitilize experiment logfiles and variables
-        """
-        ## reinitilize JSON files
-        self.init_log_dict()
+    def reset(self, info_logfile_path, timings_logfile_path, path):
+        ## update automation paths
+        self.timings_logfile_path = timings_logfile_path
+        self.info_logfile_path = info_logfile_path
+        self.path = path
+        ## update path of other dependancies:
+        self.dlp_gui.reset(timings_logfile_path = self.timings_logfile_path, 
+                                       info_logfile_path = self.info_logfile_path)
+        self.camera_gui.reset(timings_logfile_path = self.timings_logfile_path, 
+                                       info_logfile_path = self.info_logfile_path,
+                                       path_experiment = self.path)
+        self.laser_gui.reset(timings_logfile_path = self.timings_logfile_path, 
+                                       info_logfile_path = self.info_logfile_path)
 
-        self.images = []
-        self.image_list = []
-        self.image_reshaped = []
-        self.ephy_data = []
-        self.run_nb = 0
 
-        ## init perf_counter for timing events
-        self.perf_counter_init = time.perf_counter()
-        jsonFunctions.write_to_json(self.perf_counter_init, 'OPTIMAQS/config_files/perf_counter_init.json')
 
-        ## generate folder to save the data
-        self.path = self.path_init
-        self.path_raw_data = self.path + '\\raw_data'
-        date = time.strftime("%Y_%m_%d")
-        self.path = os.path.join(self.path, date)
-        if not os.path.exists(self.path):
-            os.makedirs(self.path) ## make a folder with the date of today if it does not already exists
-        n = 1
-        self.path_temp = os.path.join(self.path, 'experiment_' + str(n))  ## in case of multiple experiments a day, need to create several subdirectory
-        while os.path.exists(self.path_temp):                             ## but necesarry to check which one aleady exists
-            n += 1
-            self.path_temp = os.path.join(self.path, 'experiment_' + str(n))
-        self.path = self.path_temp
-        self.path_raw_data = self.path + '\\raw_data'
-        os.makedirs(self.path)
-        os.makedirs(self.path + '\\dlp_images')
-        os.makedirs(self.path + '\\raw_data')
-        jsonFunctions.write_to_json(self.path, 'OPTIMAQS/config_files/last_experiment.json')
+#    def initialize_experiment(self):
+#        """
+#        Initialize/Reinitilize experiment logfiles and variables
+#        """
+#        ## reinitilize JSON files
+#        self.init_log_dict()
+#
+#        self.images = []
+#        self.image_list = []
+#        self.image_reshaped = []
+#        self.ephy_data = []
+#        self.run_nb = 0
+#
+#        ## init perf_counter for timing events
+#        self.perf_counter_init = time.perf_counter()
+#        jsonFunctions.write_to_json(self.perf_counter_init, 
+#                                    'OPTIMAQS/config_files/perf_counter_init.json')
+#
+#        ## generate folder to save the data
+#        self.path = self.path_init
+#        self.path_raw_data = self.path + '\\raw_data'
+#        date = time.strftime("%Y_%m_%d")
+#        self.path = os.path.join(self.path, date)
+#        if not os.path.exists(self.path):
+#            os.makedirs(self.path) ## make a folder with the date of today if it does not already exists
+#        self.path_temp = os.path.join(self.path, 'experiment_' + str(self.n_experiment))  ## in case of multiple experiments a day, need to create several subdirectory
+#        while os.path.exists(self.path_temp):                             ## but necesarry to check which one aleady exists
+#            self.n_experiment += 1
+#            self.path_temp = os.path.join(self.path, 'experiment_' + str(self.n_experiment))
+#        self.path = self.path_temp
+#        self.path_raw_data = self.path + '\\raw_data'
+#        os.makedirs(self.path)
+#        os.makedirs(self.path + '\\dlp_images')
+#        os.makedirs(self.path + '\\raw_data')
+#        jsonFunctions.write_to_json(self.path, 'OPTIMAQS/config_files/last_experiment.json')
+#
+#        ## generate log files
+#        self.info_logfile_path = self.path + "/experiment_{}_info.json".format(self.n_experiment)
+#        experiment_time = time.asctime(time.localtime(time.time())) 
+#        self.info_logfile_dict['experiment creation date'] = experiment_time
+##        with open(self.info_logfile_path,"w+") as file:       ## store basic info and comments
+##            json.dump(self.info_logfile_dict, file)
+#        jsonFunctions.write_to_json(self.info_logfile_dict, self.info_logfile_path)
+#
+#        self.timings_logfile_path = self.path + "/experiment_{}_timings.json".format(self.n_experiment)
+##        with open(self.timings_logfile_path, "w+") as file:
+##            json.dump(self.timings_logfile_dict, file)
+#        jsonFunctions.write_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+#
+#        # self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI  # this doesn't work here but works in main
+#        
+#        ## update path of other dependancies:
+#        self.dlp_gui.reset(timings_logfile_path= self.timings_logfile_path, 
+#                                       info_logfile_path = self.info_logfile_path)
+#        self.camera_gui.reset(timings_logfile_path= self.timings_logfile_path, 
+#                                       info_logfile_path = self.info_logfile_path,
+#                                       path_experiment = self.path)
+#        self.laser_gui.reset(timings_logfile_path= self.timings_logfile_path, 
+#                                       info_logfile_path = self.info_logfile_path)
 
-        ## generate log files
-        self.info_logfile_path = self.path + "/experiment_{}_info.json".format(n)
-        experiment_time = time.asctime(time.localtime(time.time())) 
-        self.info_logfile_dict['experiment creation date'] = experiment_time
-#        with open(self.info_logfile_path,"w+") as file:       ## store basic info and comments
-#            json.dump(self.info_logfile_dict, file)
-        jsonFunctions.write_to_json(self.info_logfile_dict, self.info_logfile_path)
 
-        self.timings_logfile_path = self.path + "/experiment_{}_timings.json".format(n)
-#        with open(self.timings_logfile_path, "w+") as file:
-#            json.dump(self.timings_logfile_dict, file)
-        jsonFunctions.write_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+    def load_modules(self):
+        ## can there be a better way than having automation on top of main ?
+        self.dlp_gui = DLPGui(info_logfile_path = self.info_logfile_path,
+                              timings_logfile_path = self.timings_logfile_path)
+        self.dlp_gui.setGeometry(1200, 400, 500, 100)
+        self.camera_gui = CameraGui(info_logfile_path = self.info_logfile_path,
+                              timings_logfile_path = self.timings_logfile_path)
+        self.camera_gui.setGeometry(100, 30, 200, 900)
+        self.laser_gui = LaserGui(info_logfile_path = self.info_logfile_path,
+                              timings_logfile_path = self.timings_logfile_path)
+        self.laser_gui.setGeometry(1200, 250, 500, 100)
+#        self.controller_gui = ControllerGui
+#        self.electrophysiology_gui = ElectrophysiologyGui()
 
-        # self.current_folder_label_2.setText(str(self.path)) ## show current directory in the GUI  # this doesn't work here but works in main
-
-    def init_log_dict(self):
-        """
-        Initialize dictionaries that will populate the json files saving info
-        and timings
-        """
-        ## initilizing dict for timings
-        self.timings_logfile_dict = {}
-        self.timings_logfile_dict['timer_init'] = {}
-        self.timings_logfile_dict['timer_init']['main'] = []
-        self.timings_logfile_dict['timer_init']['camera'] = []
-        self.timings_logfile_dict['timer_init']['dlp'] = []
-        self.timings_logfile_dict['timer_init']['laser'] = []
-        self.timings_logfile_dict['timer_init']['ephy'] = []
-        self.timings_logfile_dict['timer_init']['ephy_stim'] = [] # do I need this one ?
-        self.timings_logfile_dict['laser'] = {}
-        self.timings_logfile_dict['laser']['on'] = []
-        self.timings_logfile_dict['laser']['off'] = []
-        self.timings_logfile_dict['dlp'] = {}
-        self.timings_logfile_dict['dlp']['on'] = []
-        self.timings_logfile_dict['dlp']['off'] = []
-        self.timings_logfile_dict['camera'] = []
-        self.timings_logfile_dict['camera_bis'] = []
-        self.timings_logfile_dict['ephy'] = {}
-        self.timings_logfile_dict['ephy']['on'] = []
-        self.timings_logfile_dict['ephy']['off'] = []
-        self.timings_logfile_dict['ephy_stim'] = {}
-        self.timings_logfile_dict['ephy_stim']['on'] = []
-        self.timings_logfile_dict['ephy_stim']['off'] = []
-        ## initilizing dict for info
-        self.info_logfile_dict = {}
-        self.info_logfile_dict['experiment creation date'] = None
-        self.info_logfile_dict['roi'] = []
-        self.info_logfile_dict['exposure time'] = []
-        self.info_logfile_dict['binning'] = []
-        self.info_logfile_dict['fov'] = []
-        self.info_logfile_dict['fps'] = []
+        
+#    def init_log_dict(self):
+#        """
+#        Initialize dictionaries that will populate the json files saving info
+#        and timings
+#        """
+#        ## initilizing dict for timings
+#        self.timings_logfile_dict = {}
+#        self.timings_logfile_dict['timer_init'] = {}
+#        self.timings_logfile_dict['timer_init']['main'] = []
+#        self.timings_logfile_dict['timer_init']['camera'] = []
+#        self.timings_logfile_dict['timer_init']['dlp'] = []
+#        self.timings_logfile_dict['timer_init']['laser'] = []
+#        self.timings_logfile_dict['timer_init']['ephy'] = []
+#        self.timings_logfile_dict['timer_init']['ephy_stim'] = [] # do I need this one ?
+#        self.timings_logfile_dict['laser'] = {}
+#        self.timings_logfile_dict['laser']['on'] = []
+#        self.timings_logfile_dict['laser']['off'] = []
+#        self.timings_logfile_dict['dlp'] = {}
+#        self.timings_logfile_dict['dlp']['on'] = []
+#        self.timings_logfile_dict['dlp']['off'] = []
+#        self.timings_logfile_dict['camera'] = []
+#        self.timings_logfile_dict['camera_bis'] = []
+#        self.timings_logfile_dict['ephy'] = {}
+#        self.timings_logfile_dict['ephy']['on'] = []
+#        self.timings_logfile_dict['ephy']['off'] = []
+#        self.timings_logfile_dict['ephy_stim'] = {}
+#        self.timings_logfile_dict['ephy_stim']['on'] = []
+#        self.timings_logfile_dict['ephy_stim']['off'] = []
+#        ## initilizing dict for info
+#        self.info_logfile_dict = {}
+#        self.info_logfile_dict['experiment creation date'] = None
+#        self.info_logfile_dict['roi'] = []
+#        self.info_logfile_dict['exposure time'] = []
+#        self.info_logfile_dict['binning'] = []
+#        self.info_logfile_dict['fov'] = []
+#        self.info_logfile_dict['fps'] = []
 
     def dlp_static_image(self):
         ## getting values from automation gui
@@ -212,6 +249,7 @@ class AutomationGui(QWidget):
             self.run_experiment_dlp_static_image()
 
     def run_experiment_dlp_static_image(self):
+#        self.initialize_experiment()
         dlp_worker = Worker(self.dlp_static_image)
 #        ephy_worker = Worker(self.ephy_recording_thread)
         self.camera_gui.stream()

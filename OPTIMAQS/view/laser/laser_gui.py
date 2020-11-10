@@ -17,7 +17,7 @@ from OPTIMAQS.utils.signals import Signals
 
 
 class LaserGui(QWidget):
-    def __init__(self):
+    def __init__(self, info_logfile_path=None, timings_logfile_path=None):
         super(LaserGui, self).__init__()
         uic.loadUi('OPTIMAQS/view/laser/laser.ui', self)
         self.show()
@@ -25,8 +25,13 @@ class LaserGui(QWidget):
         self.initialize_laser_parameters()
         self.actions()
         
+        self.info_logfile_path = info_logfile_path
+        self.timings_logfile_path = timings_logfile_path 
+        
+        
         self.path = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
-        self.timings_logfile_path = self.path + '/experiment_' + self.path[-1] + '_timings.json'
+#        self.timings_logfile_path = self.path + '/experiment_' + self.path[-1] + '_timings.json'
+        self.timings_logfile_path = timings_logfile_path
         self.timings_logfile_dict = {}
         self.timings_logfile_dict['laser'] = {}
         self.timings_logfile_dict['laser']['on'] = []
@@ -61,6 +66,14 @@ class LaserGui(QWidget):
         self.laser_on_button.clicked.connect(self.laser_on)
         self.laser_off_button.clicked.connect(self.laser_off)
 
+    def reset(self, timings_logfile_path, info_logfile_path):
+        self.info_logfile_path = info_logfile_path
+        self.timings_logfile_path = timings_logfile_path
+        self.timings_logfile_dict = {}
+        self.timings_logfile_dict['laser'] = {}
+        self.timings_logfile_dict['laser']['on'] = []
+        self.timings_logfile_dict['laser']['off'] = []
+
     def laser_on(self):
         self.laser.turn_on()
         self.timings_logfile_dict['laser']['on'].append((time.perf_counter() - self.perf_counter_init)*1000)
@@ -68,6 +81,8 @@ class LaserGui(QWidget):
     def laser_off(self):
         self.laser.turn_off()
         self.timings_logfile_dict['laser']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
+        jsonFunctions.append_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
