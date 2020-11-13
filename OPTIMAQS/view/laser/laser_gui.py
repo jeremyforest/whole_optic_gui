@@ -81,7 +81,7 @@ class LaserGui(QWidget):
     def laser_off(self):
         self.laser.turn_off()
         self.timings_logfile_dict['laser']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
-        jsonFunctions.append_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+        jsonFunctions.update_timings_to_json(self.timings_logfile_dict, self.timings_logfile_path)
 
 
 if __name__ == "__main__":

@@ -241,7 +241,7 @@ class CameraGui(QWidget):
             #save_images_worker.signals.progress.connect(self.progress_fn)
             self.threadpool.start(save_images_worker)
             ## saving images times
-            jsonFunctions.append_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+            jsonFunctions.update_timings_to_json(self.timings_logfile_dict, self.timings_logfile_path)
             ## saving experiment info
             #self.info_logfile_dict['roi'].append(self.roi_list) ##this is doe in export roi
             self.info_logfile_dict['exposure time'].append(self.exposure_time_value.value())

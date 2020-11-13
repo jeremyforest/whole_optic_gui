@@ -391,7 +391,7 @@ class DLPGui(QWidget):
         self.dlp.set_display_mode('internal')
         self.dlp.black()
         self.timings_logfile_dict['dlp']['off'].append((time.perf_counter() - self.perf_counter_init)*1000)
-        jsonFunctions.append_to_json(self.timings_logfile_dict, self.timings_logfile_path)
+        jsonFunctions.update_timings_to_json(self.timings_logfile_dict, self.timings_logfile_path)
         print('dlp end signal received')
 
     def generate_one_image_per_roi(self, roi_list):
