@@ -181,7 +181,7 @@ class CameraGui(QWidget):
             self.image = self.images[0]
             self.image_reshaped = self.image.reshape(int(self.y_dim/self.bin_size),
                                                     int(self.x_dim/self.bin_size))
-            self.graphicsView.setImage(self.image_reshaped)
+            self.graphicsView.setImage(self.image_reshaped, levels=(0, 255))
             image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
             self.save_as_png(self.image_reshaped, image_name)
 
@@ -230,7 +230,7 @@ class CameraGui(QWidget):
         if self.image_reshaped == []:
             pass
         else:
-            self.graphicsView.setImage(self.image_reshaped)
+            self.graphicsView.setImage(self.image_reshaped, levels=(0, 255))
 
     def saving_images(self, images, times):
         if self.saving_check.isChecked():
@@ -294,7 +294,7 @@ class CameraGui(QWidget):
                 image_reshaped = image.reshape(int(math.sqrt(image.shape[0])), int(math.sqrt(image.shape[0])))
                 images.append(image_reshaped)
             for img in images:
-                self.graphicsView.setImage(img)
+                self.graphicsView.setImage(img, levels=(0, 255))
                 pg.QtGui.QApplication.processEvents()   ## maybe needs to be recoded in its own thread with the update function ?
 
     def exposure_time(self, value):
