@@ -9,6 +9,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, \
 from PyQt5.QtGui import QImage, QPixmap, QPen, QPainter
 from PyQt5.QtTest import QTest
 import pyqtgraph as pg
+pg.setConfigOptions(imageAxisOrder='row-major')
 
 ## General packages
 import sys
