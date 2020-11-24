@@ -76,7 +76,7 @@
      <x>0</x>
      <y>0</y>
      <width>803</width>
-     <height>20</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuMenu">
@@ -103,6 +103,7 @@
      <string>Config</string>
     </property>
     <addaction name="actionChange_default_path"/>
+    <addaction name="actionDLP_Camera_Calibration"/>
    </widget>
    <widget class="QMenu" name="menuAnalysis">
     <property name="title">
@@ -164,6 +165,11 @@
   <action name="actionNetowrk_connections">
    <property name="text">
     <string>Network connections</string>
+   </property>
+  </action>
+  <action name="actionDLP_Camera_Calibration">
+   <property name="text">
+    <string>DLP/Camera Calibration</string>
    </property>
   </action>
  </widget>

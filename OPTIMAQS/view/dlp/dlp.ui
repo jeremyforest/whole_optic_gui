@@ -26,19 +26,6 @@
       <enum>QFrame::Box</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_5">
-      <item row="0" column="1">
-       <widget class="QPushButton" name="calibration_button">
-        <property name="toolTip">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Calibrate the DLP/Camera images with their respective resolutions so that ROI designed from the camera interface can be projected with the DLP &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-        <property name="text">
-         <string>New Calibration</string>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="0" colspan="2">
-       <widget class="QComboBox" name="display_mode_subbox_combobox"/>
-      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="dlp_label">
         <property name="font">
@@ -55,7 +42,20 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0" colspan="2">
+      <item row="0" column="1">
+       <widget class="QLabel" name="display_mode_label">
+        <property name="text">
+         <string>Current Display Mode</string>
+        </property>
+        <property name="scaledContents">
+         <bool>true</bool>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
        <widget class="QComboBox" name="display_mode_combobox">
         <item>
          <property name="text">
@@ -79,21 +79,11 @@
         </item>
        </widget>
       </item>
-      <item row="4" column="0" rowspan="2" colspan="2">
-       <widget class="QGraphicsView" name="dlp_projection_view"/>
+      <item row="3" column="1">
+       <widget class="QComboBox" name="display_mode_subbox_combobox"/>
       </item>
-      <item row="1" column="0" colspan="2">
-       <widget class="QLabel" name="display_mode_label">
-        <property name="text">
-         <string>Current Display Mode</string>
-        </property>
-        <property name="scaledContents">
-         <bool>true</bool>
-        </property>
-        <property name="wordWrap">
-         <bool>true</bool>
-        </property>
-       </widget>
+      <item row="4" column="0" rowspan="3" colspan="2">
+       <widget class="QGraphicsView" name="dlp_projection_view"/>
       </item>
      </layout>
     </widget>

@@ -20,7 +20,15 @@ from OPTIMAQS.utils.worker import Worker
 from OPTIMAQS.utils.json_functions import jsonFunctions
 from OPTIMAQS.utils.debug import Pyqt_debugger
 
-
+class Calibration():
+    ''' 
+    Minimal camera interface for calibration
+    '''
+    def __init__(self):
+        super().__init__()
+        
+    
+    
 class CameraGui(QWidget):
     """
     GUI for the camera
@@ -34,6 +42,7 @@ class CameraGui(QWidget):
 
         ## GUI related
         self.camera_ui = uic.loadUi('OPTIMAQS/view/camera/camera.ui', self)
+
         self.camera_ui.show()
 
         self.import_camera_model()
@@ -81,6 +90,7 @@ class CameraGui(QWidget):
 
         ## UI stuff
 #        self.actionQuit.triggered.connect(self.close)
+
 
     def import_camera_model(self):
         """
@@ -145,7 +155,6 @@ class CameraGui(QWidget):
         self.export_ROI_button.clicked.connect(self.export_roi)
 
     def reset(self, timings_logfile_path, info_logfile_path, path_experiment):
-
         self.info_logfile_path = info_logfile_path
         self.info_logfile_dict = {}
         self.info_logfile_dict['roi'] = []
@@ -184,6 +193,7 @@ class CameraGui(QWidget):
             self.graphicsView.setImage(self.image_reshaped, levels=(0, 255))
             image_name = QInputDialog.getText(self, 'Input Dialog', 'File name:')
             self.save_as_png(self.image_reshaped, image_name)
+        return self.image_reshaped
 
     def stream(self):
          self.timings_logfile_dict['camera'] = []

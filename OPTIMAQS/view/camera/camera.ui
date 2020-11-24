@@ -32,6 +32,51 @@
       <enum>QFrame::Box</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="5" colspan="2">
+       <widget class="QPushButton" name="stream_button">
+        <property name="text">
+         <string>Stream</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="11">
+       <widget class="QPushButton" name="snap_image_button">
+        <property name="text">
+         <string>Snap image</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="9">
+       <widget class="QLabel" name="loading_saving_label">
+        <property name="text">
+         <string>Progress</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="main_camera_label">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+          <underline>true</underline>
+         </font>
+        </property>
+        <property name="text">
+         <string>Main Camera</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="12" colspan="7">
+       <widget class="QLabel" name="subarray_label">
+        <property name="text">
+         <string>subarray mode size and origin</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
       <item row="5" column="1">
        <widget class="QComboBox" name="binning_combo_box">
         <property name="editable">
@@ -63,27 +108,23 @@
         </item>
        </widget>
       </item>
+      <item row="1" column="5">
+       <widget class="QCheckBox" name="saving_check">
+        <property name="text">
+         <string>Saving ?</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <property name="tristate">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
       <item row="5" column="0">
        <widget class="QLabel" name="binning_label">
         <property name="text">
          <string>Binning</string>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="exposure_time_label">
-        <property name="text">
-         <string>Exposure time</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="0" rowspan="2" colspan="19">
-       <widget class="Custom_pyqtgraph_widget" name="graphicsView">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
         </property>
        </widget>
       </item>
@@ -104,19 +145,6 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="5">
-       <widget class="QCheckBox" name="saving_check">
-        <property name="text">
-         <string>Saving ?</string>
-        </property>
-        <property name="checked">
-         <bool>false</bool>
-        </property>
-        <property name="tristate">
-         <bool>false</bool>
-        </property>
-       </widget>
-      </item>
       <item row="5" column="6" colspan="2">
        <widget class="QLabel" name="current_binning_size_label_2">
         <property name="text">
@@ -127,20 +155,10 @@
         </property>
        </widget>
       </item>
-      <item row="5" column="12" colspan="7">
-       <widget class="QLabel" name="subarray_label">
+      <item row="4" column="0">
+       <widget class="QLabel" name="exposure_time_label">
         <property name="text">
-         <string>subarray mode size and origin</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="9">
-       <widget class="QLabel" name="loading_saving_label">
-        <property name="text">
-         <string>Progress</string>
+         <string>Exposure time</string>
         </property>
        </widget>
       </item>
@@ -164,45 +182,10 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="5" colspan="2">
-       <widget class="QPushButton" name="stream_button">
-        <property name="text">
-         <string>Stream</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="11">
-       <widget class="QPushButton" name="snap_image_button">
-        <property name="text">
-         <string>Snap image</string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="main_camera_label">
-        <property name="font">
-         <font>
-          <weight>75</weight>
-          <bold>true</bold>
-          <underline>true</underline>
-         </font>
-        </property>
-        <property name="text">
-         <string>Main Camera</string>
-        </property>
-       </widget>
-      </item>
       <item row="0" column="17">
        <widget class="QPushButton" name="update_internal_frame_rate_button">
         <property name="text">
          <string>Update </string>
-        </property>
-       </widget>
-      </item>
-      <item row="0" column="3">
-       <widget class="QPushButton" name="replay_button">
-        <property name="text">
-         <string>Replay</string>
         </property>
        </widget>
       </item>
@@ -216,6 +199,13 @@
         </property>
         <property name="value">
          <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="replay_button">
+        <property name="text">
+         <string>Replay</string>
         </property>
        </widget>
       </item>
@@ -245,6 +235,16 @@
        <widget class="QRadioButton" name="subArray_mode_radioButton">
         <property name="text">
          <string>SubArray mode</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" rowspan="2" colspan="19">
+       <widget class="Custom_pyqtgraph_widget" name="graphicsView">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
         </property>
        </widget>
       </item>

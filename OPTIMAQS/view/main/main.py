@@ -16,6 +16,9 @@ import sys
 import time
 import os
 import json
+from PIL import Image, ImageDraw, ImageOps
+import cv2
+import numpy as np
 
 ## Custom imports
 from OPTIMAQS.utils.signals import Signals
@@ -83,6 +86,7 @@ class MainWindow(QMainWindow):
         self.actionElectrophysiology.triggered.connect(self.load_electrophysiology)
         ## Config
         self.actionChange_default_path.triggered.connect(self.set_main_path_from_user_input)
+        self.actionDLP_Camera_Calibration.triggered.connect(self.calibration)
         ##Analysis
 #        self.actionNetwork_connections.triggered.connect(self.networkConnections)
 
@@ -120,7 +124,8 @@ class MainWindow(QMainWindow):
         Load the dlp view
         """
         print("loading DLP module")
-        self.dlp_gui = DLPGui(info_logfile_path = self.info_logfile_path,
+        self.dlp_gui = DLPGui(path = self.path,
+                              info_logfile_path = self.info_logfile_path,
                               timings_logfile_path = self.timings_logfile_path)
         self.dlp_gui.setGeometry(1200, 400, 500, 100)
         self.activate_dlp = True
@@ -356,6 +361,111 @@ class MainWindow(QMainWindow):
 #                        f'{self.path}')
 
 
+    def calibration(self):
+#        Pyqt_debugger.debug_trace()
+        self.camera_gui = CameraGui()
+        self.activate_camera = True
+        self.dlp_gui = DLPGui()
+        self.activate_dlp = True
+        
+        self.calibration_dlp_camera_matrix_path = 'C:\\Users\\barral\\Desktop\\whole_optic_gui\\OPTIMAQS\\view\\dlp\\calibration_matrix.json'
+        if os.path.isfile(self.calibration_dlp_camera_matrix_path):
+            print('Calibration matrix already exists, using it as reference')
+            with open(self.calibration_dlp_camera_matrix_path) as file:
+                self.camera_to_dlp_matrix = np.array(json.load(file))
+        else:
+            print('Calibration matrix doesnt exist. Generating calibration now')
+            ## dlp img
+            dlp_image_path = QFileDialog.getOpenFileName(self, 'Calibration file', 'C:/',"Image files (*.bmp)")[0]
+            dlp_image = Image.open(dlp_image_path)
+            dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
+            dlp_image = np.asarray(dlp_image)
+            dlp_image = cv2.resize(dlp_image, (608,684))
+            shape = (3, 3)
+            isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
+            if isFound_dlp:
+                print('found {} circle centers on images'.format(len(centers_dlp)))
+            # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp) ## if ever need to put chessboard
+
+            ## projecting the calibration image with the dlp to get the camera image
+            self.dlp_gui.display_mode(0)
+            self.dlp_gui.choose_action(index = 0, dlp_image_path = dlp_image_path)
+            time.sleep(3)
+            self.camera_gui.exposure_time(1)
+            camera_image = self.camera_gui.snap_image()
+
+            ## converting the image in greylevels to 0/1 bit format using a threshold
+            thresh = 250
+            fn = lambda x : 255 if x > thresh else 0
+            camera_image = Image.fromarray(camera_image)
+            camera_image = camera_image.convert('L').point(fn, mode='1')
+            camera_image = ImageOps.invert(camera_image.convert('RGB'))
+            camera_image = np.asarray(camera_image)
+            ## need to tune the cv2 detector for the detection of circles in a large image
+            params = cv2.SimpleBlobDetector_Params()
+            params.filterByArea = True
+            params.minArea = 100
+            params.maxArea = 10000
+            params.minDistBetweenBlobs = 100
+            params.filterByColor = False
+            params.filterByConvexity = False
+            params.minCircularity = 0.1
+            detector = cv2.SimpleBlobDetector_create(params)
+            # keypoints = detector.detect(camera_image)
+            isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
+            if isFound_camera:
+                print('found {} circle centers on images'.format(len(centers_camera)))
+
+            ## for debug
+            camera_image_drawn = cv2.drawChessboardCorners(camera_image, shape, centers_camera, isFound_camera)
+            camera_image_drawn = Image.fromarray(camera_image_drawn)
+            camera_image_drawn.show()
+
+        # homography_matrix = cv2.findHomography(centers_camera, centers_dlp)
+        # warped_camera_image = cv2.warpPerspective(camera_image, homography_matrix[0], dsize=(608,684))
+        # warped_camera_image_drawn = Image.fromarray(warped_camera_image)
+        # warped_camera_image_drawn.show()
+
+        ## performing the calculs to get the transformation matrix between the camera image and the dlp image
+            try:
+                camera_to_dlp_matrix = cv2.findHomography(centers_camera, centers_dlp)[0]
+                with open(self.calibration_dlp_camera_matrix_path, "w") as file:
+                    file.write(json.dumps(camera_to_dlp_matrix.tolist()))
+            except:
+                pass
+
+
+        # four_corners_camera = centers_camera[0],centers_camera[2], centers_camera[6],centers_camera[8]
+        # four_corners_camera = np.array([[center for [center] in four_corners_camera]])
+        # four_corners_dlp = centers_dlp[0], centers_dlp[2], centers_dlp[6], centers_dlp[8]
+        # four_corners_dlp = np.array([[center for [center] in four_corners_dlp]])
+        # self.camera_to_dlp_matrix = cv2.getPerspectiveTransform(four_corners_camera, four_corners_dlp)
+
+        ########################
+        ## getting the camera distortion matrix
+        # centers_camera = np.array([[center for [center] in centers_camera]])
+        # centers_dlp = np.array([[center for [center] in centers_dlp]])
+        # centers_dlp = centers_dlp.reshape(1,9,2)
+        #
+        # new_dim = np.zeros((1,9,1)) ## calibrateCamera function requires input in 3D
+        # centers_camera = np.concatenate((centers_camera, new_dim), axis=2)
+        #
+        # centers_camera = centers_camera.astype('float32') ## opencv is weird and if input are not specifically in float32 it will beug
+        # centers_dlp = centers_dlp.astype('float32')
+        #
+        # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(centers_camera, centers_dlp, (dlp_image.shape[0], dlp_image.shape[1]), None, None)
+        # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)  # example of how to undistord an image
+        # Image.fromarray(undist)
+        ########################
+
+        ## getting the outline of the dlp onto the camera interface ##
+        # dlp_to_camera_matrix = cv2.findHomography(centers_dlp, centers_camera )
+        # x0, y0, x1, y1 = centers_dlp[4][0][0]-608/2, centers_dlp[4][0][1]-684/2, centers_dlp[4][0][0]+608/2, centers_dlp[4][0][1]+684/2
+        # cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
+        # draw = ImageDraw.Draw(self.graphcsView)
+        # draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
+
+        return camera_to_dlp_matrix
 
 
 

@@ -86,7 +86,8 @@ class AutomationGui(QWidget):
         self.path = path
         ## update path of other dependancies:
         self.dlp_gui.reset(timings_logfile_path = self.timings_logfile_path, 
-                                       info_logfile_path = self.info_logfile_path)
+                                       info_logfile_path = self.info_logfile_path,
+                                       path_experiment = self.path)
         self.camera_gui.reset(timings_logfile_path = self.timings_logfile_path, 
                                        info_logfile_path = self.info_logfile_path,
                                        path_experiment = self.path)

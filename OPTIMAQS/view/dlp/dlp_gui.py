@@ -25,7 +25,7 @@ from OPTIMAQS.utils.debug import Pyqt_debugger
 
 
 class DLPGui(QWidget):
-    def __init__(self, info_logfile_path=None, timings_logfile_path=None):
+    def __init__(self, path=None, info_logfile_path=None, timings_logfile_path=None):
         """
         GUI for the Digital Light Processor / Digital Micromirror Device
         """
@@ -35,17 +35,20 @@ class DLPGui(QWidget):
         self.dlp_ui = uic.loadUi('OPTIMAQS/view/dlp/dlp.ui', self)
         self.dlp_ui.show()
 
+        self.path = self.path_experiment = jsonFunctions.open_json(
+                                          'OPTIMAQS/config_files/last_experiment.json')
         self.camera_to_dlp_matrix = []
-        self.camera_distortion_matrix = []
-        self.dlp_image_path = []
-        self.path = jsonFunctions.open_json('OPTIMAQS/config_files/last_experiment.json')
-
+        self.calibration_dlp_camera_matrix_path = 'C:\\Users\\barral\\Desktop\\whole_optic_gui\\OPTIMAQS\\view\\dlp\\calibration_matrix.json'
+        if os.path.isfile(self.calibration_dlp_camera_matrix_path):
+            print('Calibration matrix already exists, using it as reference')
+            with open(self.calibration_dlp_camera_matrix_path) as file:
+                self.camera_to_dlp_matrix = np.array(json.load(file))
+        else:
+            print('no calibration matrix existing. Need to rerun calibration')
         ## initialize dlp
         self.import_dlp_model()
         self.actions()
         self.initialize_dlp_parameters()
-        self.calibration_dlp_camera_matrix_path = 'C:\\Users\\barral\\Desktop\\whole_optic_gui-refactoring\\OPTIMAQS\\view\\dlp\\calibration_matrix.json'
-        self.calibration()
 
         ## JSON files
 #        self.info_logfile_path = self.path + '/experiment_' + self.path[-1] + '_info.json'
@@ -92,9 +95,8 @@ class DLPGui(QWidget):
         ## DLP control
         self.display_mode_combobox.activated.connect(self.display_mode)
         self.display_mode_subbox_combobox.activated.connect(self.choose_action)
-        self.calibration_button.clicked.connect(self.calibration)
 
-    def reset(self, timings_logfile_path, info_logfile_path):
+    def reset(self, timings_logfile_path, info_logfile_path, path_experiment):
         self.info_logfile_path = info_logfile_path
         self.timings_logfile_dict = {}
         self.timings_logfile_dict['dlp'] = {}
@@ -105,112 +107,8 @@ class DLPGui(QWidget):
         self.info_logfile_dict = {}
         self.info_logfile_dict['roi'] = []
         
-    def calibration(self):
-        if os.path.isfile(self.calibration_dlp_camera_matrix_path):
-            print('Calibration matrix already exists, using it as reference')
-            with open(self.calibration_dlp_camera_matrix_path) as file:
-                self.camera_to_dlp_matrix = np.array(json.load(file))
-        else:
-            print('Calibration matrix doesnt exist. Generating calibration now')
-            ## dlp img
-            ## will ask for the calibration image of the dlp
-            dlp_image_path = QFileDialog.getOpenFileName(self, 'Open file', 'C:/',"Image files (*.bmp)")[0]
-            # dlp_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/dlp/calibration_images/Calibration_9pts.bmp"
-            dlp_image = Image.open(dlp_image_path)
-            dlp_image = ImageOps.invert(dlp_image.convert('RGB'))
-            dlp_image = np.asarray(dlp_image)
-            dlp_image = cv2.resize(dlp_image, (608,684))
-            shape = (3, 3)
-            isFound_dlp, centers_dlp = cv2.findCirclesGrid(dlp_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING)
-            if isFound_dlp:
-                print('found {} circle centers on images'.format(len(centers_dlp)))
-            # show = cv2.drawChessboardCorners(dlp_image, shape, centers_dlp, isFound_dlp) ## if ever need to put chessboard
-
-            ## projecting the calibration image with the dlp to get the camera image
-            self.dlp.display_static_image(dlp_image_path)
-            time.sleep(2)
-            self.cam.write_exposure(0.10)
-            self.cam.start_acquisition()
-            time.sleep(1)
-            for i in range(1):
-                camera_image = self.cam.get_images()[0][0].reshape(self.x_dim,self.y_dim).T ##\ do I need to invert the dim here ?
-            self.cam.end_acquisition()
-            # camera_image_path = "/media/jeremy/Data/CloudStation/Postdoc/Projects/Memory/Computational_Principles_of_Memory/optopatch/equipment/whole_optic_gui/camera/calibration_images/camera_image2.jpeg"
-            # camera_image = Image.open(camera_image_path)
-
-            ## converting the image in greylevels to 0/1 bit format using a threshold
-            thresh = 250
-            fn = lambda x : 255 if x > thresh else 0
-            camera_image = Image.fromarray(camera_image)
-            camera_image = camera_image.convert('L').point(fn, mode='1')
-            camera_image = ImageOps.invert(camera_image.convert('RGB'))
-            camera_image = np.asarray(camera_image)
-            ## need to tune the cv2 detector for the detection of circles in a large image
-            params = cv2.SimpleBlobDetector_Params()
-            params.filterByArea = True
-            params.minArea = 100
-            params.maxArea = 10000
-            params.minDistBetweenBlobs = 100
-            params.filterByColor = False
-            params.filterByConvexity = False
-            params.minCircularity = 0.1
-            detector = cv2.SimpleBlobDetector_create(params)
-            # keypoints = detector.detect(camera_image)
-            isFound_camera, centers_camera = cv2.findCirclesGrid(camera_image, shape, flags = cv2.CALIB_CB_SYMMETRIC_GRID + cv2.CALIB_CB_CLUSTERING, blobDetector=detector)
-            if isFound_camera:
-                print('found {} circle centers on images'.format(len(centers_camera)))
-
-            ## for debug
-            camera_image_drawn = cv2.drawChessboardCorners(camera_image, shape, centers_camera, isFound_camera)
-            camera_image_drawn = Image.fromarray(camera_image_drawn)
-            camera_image_drawn.show()
-
-        # homography_matrix = cv2.findHomography(centers_camera, centers_dlp)
-        # warped_camera_image = cv2.warpPerspective(camera_image, homography_matrix[0], dsize=(608,684))
-        # warped_camera_image_drawn = Image.fromarray(warped_camera_image)
-        # warped_camera_image_drawn.show()
-
-        ## performing the calculs to get the transformation matrix between the camera image and the dlp image
-            try:
-                self.camera_to_dlp_matrix = cv2.findHomography(centers_camera, centers_dlp)[0]
-                with open(self.calibration_dlp_camera_matrix_path, "w") as file:
-                    file.write(json.dumps(self.camera_to_dlp_matrix.tolist()))
-            except:
-                pass
-
-
-        # four_corners_camera = centers_camera[0],centers_camera[2], centers_camera[6],centers_camera[8]
-        # four_corners_camera = np.array([[center for [center] in four_corners_camera]])
-        # four_corners_dlp = centers_dlp[0], centers_dlp[2], centers_dlp[6], centers_dlp[8]
-        # four_corners_dlp = np.array([[center for [center] in four_corners_dlp]])
-        # self.camera_to_dlp_matrix = cv2.getPerspectiveTransform(four_corners_camera, four_corners_dlp)
-
-        ########################
-        ## getting the camera distortion matrix
-        # centers_camera = np.array([[center for [center] in centers_camera]])
-        # centers_dlp = np.array([[center for [center] in centers_dlp]])
-        # centers_dlp = centers_dlp.reshape(1,9,2)
-        #
-        # new_dim = np.zeros((1,9,1)) ## calibrateCamera function requires input in 3D
-        # centers_camera = np.concatenate((centers_camera, new_dim), axis=2)
-        #
-        # centers_camera = centers_camera.astype('float32') ## opencv is weird and if input are not specifically in float32 it will beug
-        # centers_dlp = centers_dlp.astype('float32')
-        #
-        # ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(centers_camera, centers_dlp, (dlp_image.shape[0], dlp_image.shape[1]), None, None)
-        # undist = cv2.undistort(camera_image, mtx, dist, None, mtx)  # example of how to undistord an image
-        # Image.fromarray(undist)
-        ########################
-
-        ## getting the outline of the dlp onto the camera interface ##
-        # dlp_to_camera_matrix = cv2.findHomography(centers_dlp, centers_camera )
-        # x0, y0, x1, y1 = centers_dlp[4][0][0]-608/2, centers_dlp[4][0][1]-684/2, centers_dlp[4][0][0]+608/2, centers_dlp[4][0][1]+684/2
-        # cv2.warpPerspective(black_image_with_ROI, self.camera_to_dlp_matrix[0],(608,684))
-        # draw = ImageDraw.Draw(self.graphcsView)
-        # draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
-
-        return self.camera_to_dlp_matrix
-
+        self.path_experiment = path_experiment
+        
     def display_mode(self, index):  #TODO:can this be implemented in QDesigner directly  ?
         self.display_mode_subbox_combobox.clear()
         if index == 0: # static image
@@ -249,22 +147,34 @@ class DLPGui(QWidget):
                         'Choose Pattern Sequence To Display',
                         'Generate Multiple Images with One ROI Per Image'])
 
-    def choose_action(self, index):
+    def choose_action(self, index, dlp_image_path=None):
         ## Static image mode
         if self.display_mode_combobox.currentIndex() == 0: ## load image
             if index == 0: ## choose static image
-                self.dlp_image_path = QFileDialog.getOpenFileName(self,
-                                    'Open file', 'C:/',"Image files (*.jpg *.bmp)")
-                img = Image.open(self.dlp_image_path[0])
-                if img.size == (608,684):
-                    self.dlp.display_static_image(self.dlp_image_path[0])
-                    self.dlp.set_display_mode('internal')
-                    self.dlp.black()
+                if dlp_image_path == None:
+                    self.dlp_image_path = QFileDialog.getOpenFileName(self,
+                                        'Open file', 'C:/',"Image files (*.jpg *.bmp)")
+                    img = Image.open(self.dlp_image_path[0])
+                    if img.size == (608,684):
+                        self.dlp.display_static_image(self.dlp_image_path[0])
+                        self.dlp.set_display_mode('internal')
+                        self.dlp.black()
+                    else:
+                        warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix,(608, 684))
+                        warped_flipped_image = cv2.flip(warped_image, 0)
+                        cv2.imwrite(self.dlp_image_path[0] + 'warped.bmp', warped_flipped_image)
+                        # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
                 else:
-                    warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix,(608, 684))
-                    warped_flipped_image = cv2.flip(warped_image, 0)
-                    cv2.imwrite(self.dlp_image_path[0] + 'warped.bmp', warped_flipped_image)
-                    # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
+                    img = Image.open(dlp_image_path)
+                    if img.size == (608,684):
+                        self.dlp.display_static_image(dlp_image_path)
+                        self.dlp.set_display_mode('internal')
+                        self.dlp.black()
+                    else:
+                        warped_image = cv2.warpPerspective(img, self.camera_to_dlp_matrix,(608, 684))
+                        warped_flipped_image = cv2.flip(warped_image, 0)
+                        cv2.imwrite(dlp_image_path + 'warped.bmp', warped_flipped_image)
+                        # self.dlp.display_static_image(self.dlp_image_path[0] + 'warped.bmp')
 
             elif index == 1:  ##generate static image from ROI
                 self.info_logfile_dict = jsonFunctions.open_json(self.info_logfile_path)
