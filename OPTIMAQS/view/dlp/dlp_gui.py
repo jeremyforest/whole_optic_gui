@@ -107,7 +107,7 @@ class DLPGui(QWidget):
         self.info_logfile_dict = {}
         self.info_logfile_dict['roi'] = []
         
-        self.path_experiment = path_experiment
+        self.path = path_experiment
         
     def display_mode(self, index):  #TODO:can this be implemented in QDesigner directly  ?
         self.display_mode_subbox_combobox.clear()
