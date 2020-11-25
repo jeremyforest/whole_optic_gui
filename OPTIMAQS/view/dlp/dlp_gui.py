@@ -181,12 +181,15 @@ class DLPGui(QWidget):
                 self.roi_list = self.info_logfile_dict['roi']
                 black_image = Image.new('1', (2048,2048), color=0) ## 2048 because we want the full fov
                 black_image_with_ROI = black_image
-                for nb in range(len(self.roi_list[0])):
-                    x0, y0 = (self.roi_list[0][nb]['pos'][0], self.roi_list[0][nb]['pos'][1])
-                    x1, y1 = (self.roi_list[0][nb]['pos'][0] + self.roi_list[0][nb]['size'][0],
-                              self.roi_list[0][nb]['pos'][1] + self.roi_list[0][nb]['size'][1])
-                    draw = ImageDraw.Draw(black_image_with_ROI)
-                    draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
+                if self.roi_list == []:
+                    print('no ROIs in ROI list, make sure to export ROIs')
+                else:
+                    for nb in range(len(self.roi_list[0])):
+                        x0, y0 = (self.roi_list[0][nb]['pos'][0], self.roi_list[0][nb]['pos'][1])
+                        x1, y1 = (self.roi_list[0][nb]['pos'][0] + self.roi_list[0][nb]['size'][0],
+                                  self.roi_list[0][nb]['pos'][1] + self.roi_list[0][nb]['size'][1])
+                        draw = ImageDraw.Draw(black_image_with_ROI)
+                        draw.rectangle([(x0, y0), (x1, y1)], fill="white", outline=None)
                 black_image_with_ROI = black_image_with_ROI.convert('RGB') ## for later the warpPerspective function needs a shape of (:,:,3)
                 black_image_with_ROI = np.asarray(black_image_with_ROI)
                 black_image_with_ROI_warped = cv2.warpPerspective(black_image_with_ROI,
