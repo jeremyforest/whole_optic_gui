@@ -478,7 +478,7 @@ class MainWindow(QMainWindow):
         if self.activate_camera is True:
             self.camera_gui.turn_off()
         if self.activate_laser is True:
-            self.laser_gui.turn_off()
+            self.laser_gui.laser_off()
         if self.activate_dlp is True:
             self.dlp_gui.turn_off()
         sys.exit()
