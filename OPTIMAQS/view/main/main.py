@@ -389,9 +389,10 @@ class MainWindow(QMainWindow):
 
             ## projecting the calibration image with the dlp to get the camera image
             self.dlp_gui.display_mode(0)
+            time.sleep(1)
             self.dlp_gui.choose_action(index = 0, dlp_image_path = dlp_image_path)
             time.sleep(3)
-            self.camera_gui.exposure_time(1)
+            self.camera_gui.exposure_time(100)
             camera_image = self.camera_gui.snap_image()
 
             ## converting the image in greylevels to 0/1 bit format using a threshold
