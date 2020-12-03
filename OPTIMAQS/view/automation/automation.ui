@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>automation_widget</class>
+ <widget class="QWidget" name="automation_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>671</width>
+    <height>333</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QFormLayout" name="formLayout">
+   <item row="0" column="0">
+    <widget class="QFrame" name="automation">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_7">
+      <item row="0" column="3">
+       <widget class="QPushButton" name="load_experiment_button">
+        <property name="text">
+         <string>Load Experiment</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="export_experiment_button">
+        <property name="text">
+         <string>Export Experiment</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1" rowspan="2" colspan="4">
+       <widget class="QTabWidget" name="auto_protocol_tabWidget">
+        <property name="currentIndex">
+         <number>1</number>
+        </property>
+        <widget class="QWidget" name="DLP_static_image">
+         <attribute name="title">
+          <string>DLP_static_image</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_10">
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="dlp_time_on_lineEdit"/>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="dlp_time_on_label">
+            <property name="text">
+             <string>DLP time ON</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3" rowspan="6" colspan="3">
+           <widget class="QLabel" name="protocol_image">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="pixmap">
+             <pixmap>DLP_static_image.png</pixmap>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="number_of_sequence_repetition_label">
+            <property name="text">
+             <string>Number of  sequence repetition</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="number_sequence_repetition_lineEdit"/>
+          </item>
+          <item row="6" column="1">
+           <widget class="QLineEdit" name="experiment_repetition_lineEdit"/>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="number_of_sequence_label">
+            <property name="text">
+             <string>Number of sequence</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="dlp_time_off_label">
+            <property name="text">
+             <string>DLP time OFF</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="number_of_sequence_lineEdit"/>
+          </item>
+          <item row="6" column="0">
+           <widget class="QLabel" name="experiment_repetition_label">
+            <property name="text">
+             <string>Experiment repetitions</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0">
+           <widget class="QLabel" name="intervalle_between_sequences_label">
+            <property name="text">
+             <string>Intervalle between sequences</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="dlp_time_off_lineEdit"/>
+          </item>
+          <item row="5" column="1">
+           <widget class="QLineEdit" name="intervalle_between_sequences_lineEdit"/>
+          </item>
+          <item row="7" column="1" colspan="3">
+           <widget class="QPushButton" name="run_experiment_dlp_static_button">
+            <property name="text">
+             <string>Run Experiment</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="DLP_hdmi">
+         <attribute name="title">
+          <string>DLP_hdmi</string>
+         </attribute>
+         <layout class="QFormLayout" name="formLayout_2">
+          <item row="0" column="0">
+           <widget class="QLabel" name="duration_of_each_image_stimulus">
+            <property name="text">
+             <string>Duration of each image stimulus (ms)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="duration_of_each_image_stimulus_lineEdit"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="number_of_repetition_label">
+            <property name="text">
+             <string>Number of repetition</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="number_of_repetition_lineEdit"/>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="delay_between_repetition_label">
+            <property name="text">
+             <string>Delay between repetition</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QLineEdit" name="delay_between_repetition_lineEdit"/>
+          </item>
+          <item row="5" column="1">
+           <widget class="QPushButton" name="run_experiment_dlp_hdmi_button">
+            <property name="text">
+             <string>Run Experiment</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="time_between_stimulus_image">
+            <property name="text">
+             <string>Time between stimulus image (ms)</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="time_between_stimulus_image_lineEdit"/>
+          </item>
+         </layout>
+        </widget>
+        <widget class="QWidget" name="Scanning">
+         <attribute name="title">
+          <string>Scanning</string>
+         </attribute>
+         <layout class="QGridLayout" name="gridLayout_11">
+          <item row="0" column="1">
+           <widget class="QPushButton" name="stop_scan_pushButton">
+            <property name="text">
+             <string>Stop Scan</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QPushButton" name="start_scan_pushButton">
+            <property name="text">
+             <string>Start Scan</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0" colspan="2" alignment="Qt::AlignVCenter">
+           <widget class="QProgressBar" name="scan_progress_progressBar">
+            <property name="value">
+             <number>24</number>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="automatic_protocols_label">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+          <underline>true</underline>
+         </font>
+        </property>
+        <property name="text">
+         <string>Automatic protocols</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

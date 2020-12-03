@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>803</width>
+    <height>174</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QGridLayout" name="gridLayout">
+    <item row="0" column="0">
+     <widget class="QFrame" name="folder">
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="folder_label">
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+           <underline>true</underline>
+          </font>
+         </property>
+         <property name="text">
+          <string>Folder:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="initialize_experiment_button">
+         <property name="text">
+          <string>Initialize Experiment</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="change_folder_button">
+         <property name="text">
+          <string>Change Folder</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="current_folder_label_2">
+         <property name="text">
+          <string>None</string>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>803</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuMenu">
+    <property name="title">
+     <string>Menu</string>
+    </property>
+    <addaction name="actionInitialize_experiment"/>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuLoad_Modules">
+    <property name="title">
+     <string>Load Modules</string>
+    </property>
+    <addaction name="separator"/>
+    <addaction name="actionCamera"/>
+    <addaction name="actionLaser"/>
+    <addaction name="actionDLP"/>
+    <addaction name="actionController"/>
+    <addaction name="actionAutomation"/>
+    <addaction name="actionElectrophysiology"/>
+   </widget>
+   <widget class="QMenu" name="menuConfig">
+    <property name="title">
+     <string>Config</string>
+    </property>
+    <addaction name="actionChange_default_path"/>
+    <addaction name="actionDLP_Camera_Calibration"/>
+   </widget>
+   <widget class="QMenu" name="menuAnalysis">
+    <property name="title">
+     <string>Analysis</string>
+    </property>
+    <addaction name="actionNetowrk_connections"/>
+   </widget>
+   <addaction name="menuMenu"/>
+   <addaction name="menuLoad_Modules"/>
+   <addaction name="menuConfig"/>
+   <addaction name="menuAnalysis"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionCamera">
+   <property name="text">
+    <string>Camera</string>
+   </property>
+  </action>
+  <action name="actionDLP">
+   <property name="text">
+    <string>DLP</string>
+   </property>
+  </action>
+  <action name="actionLaser">
+   <property name="text">
+    <string>Laser</string>
+   </property>
+  </action>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionController">
+   <property name="text">
+    <string>Controller</string>
+   </property>
+  </action>
+  <action name="actionAutomation">
+   <property name="text">
+    <string>Automation</string>
+   </property>
+  </action>
+  <action name="actionElectrophysiology">
+   <property name="text">
+    <string>Electrophysiology</string>
+   </property>
+  </action>
+  <action name="actionChange_default_path">
+   <property name="text">
+    <string>Change default path</string>
+   </property>
+  </action>
+  <action name="actionInitialize_experiment">
+   <property name="text">
+    <string>Initialize experiment</string>
+   </property>
+  </action>
+  <action name="actionNetowrk_connections">
+   <property name="text">
+    <string>Network connections</string>
+   </property>
+  </action>
+  <action name="actionDLP_Camera_Calibration">
+   <property name="text">
+    <string>DLP/Camera Calibration</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>camera_widget</class>
+ <widget class="QWidget" name="camera_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1297</width>
+    <height>696</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <item>
+    <widget class="QFrame" name="camera">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="font">
+      <font>
+       <weight>50</weight>
+       <bold>false</bold>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_2">
+      <item row="0" column="5" colspan="2">
+       <widget class="QPushButton" name="stream_button">
+        <property name="text">
+         <string>Stream</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="11">
+       <widget class="QPushButton" name="snap_image_button">
+        <property name="text">
+         <string>Snap image</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="9">
+       <widget class="QLabel" name="loading_saving_label">
+        <property name="text">
+         <string>Progress</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QLabel" name="main_camera_label">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+          <underline>true</underline>
+         </font>
+        </property>
+        <property name="text">
+         <string>Main Camera</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="12" colspan="7">
+       <widget class="QLabel" name="subarray_label">
+        <property name="text">
+         <string>subarray mode size and origin</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="1">
+       <widget class="QComboBox" name="binning_combo_box">
+        <property name="editable">
+         <bool>false</bool>
+        </property>
+        <property name="currentText">
+         <string>1x1</string>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <property name="frame">
+         <bool>true</bool>
+        </property>
+        <item>
+         <property name="text">
+          <string>1x1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>2x2</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>4x4</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item row="1" column="5">
+       <widget class="QCheckBox" name="saving_check">
+        <property name="text">
+         <string>Saving ?</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
+        </property>
+        <property name="tristate">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="binning_label">
+        <property name="text">
+         <string>Binning</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="3">
+       <widget class="QLabel" name="current_binning_size_label">
+        <property name="text">
+         <string>Current binning size</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="18">
+       <widget class="QLabel" name="internal_frame_rate_label">
+        <property name="text">
+         <string>internal frame rate</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="6" colspan="2">
+       <widget class="QLabel" name="current_binning_size_label_2">
+        <property name="text">
+         <string>None</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="exposure_time_label">
+        <property name="text">
+         <string>Exposure time</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QLCDNumber" name="exposure_time_value">
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="smallDecimalPoint">
+         <bool>true</bool>
+        </property>
+        <property name="segmentStyle">
+         <enum>QLCDNumber::Flat</enum>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="6">
+       <widget class="QPushButton" name="stop_stream_button">
+        <property name="text">
+         <string>Stop Stream</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="17">
+       <widget class="QPushButton" name="update_internal_frame_rate_button">
+        <property name="text">
+         <string>Update </string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="12" colspan="7">
+       <widget class="QProgressBar" name="progress_bar">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="3">
+       <widget class="QPushButton" name="replay_button">
+        <property name="text">
+         <string>Replay</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="3" colspan="5">
+       <widget class="QScrollBar" name="exposure_time_bar">
+        <property name="autoFillBackground">
+         <bool>false</bool>
+        </property>
+        <property name="maximum">
+         <number>1000</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="tracking">
+         <bool>true</bool>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="invertedAppearance">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="8" colspan="2">
+       <widget class="QRadioButton" name="subArray_mode_radioButton">
+        <property name="text">
+         <string>SubArray mode</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0" rowspan="2" colspan="19">
+       <widget class="Custom_pyqtgraph_widget" name="graphicsView">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+     </layout>
+     <zorder>exposure_time_label</zorder>
+     <zorder>main_camera_label</zorder>
+     <zorder>exposure_time_bar</zorder>
+     <zorder>progress_bar</zorder>
+     <zorder>loading_saving_label</zorder>
+     <zorder>exposure_time_value</zorder>
+     <zorder>binning_combo_box</zorder>
+     <zorder>binning_label</zorder>
+     <zorder>subArray_mode_radioButton</zorder>
+     <zorder>subarray_label</zorder>
+     <zorder>current_binning_size_label</zorder>
+     <zorder>current_binning_size_label_2</zorder>
+     <zorder>internal_frame_rate_label</zorder>
+     <zorder>stream_button</zorder>
+     <zorder>replay_button</zorder>
+     <zorder>update_internal_frame_rate_button</zorder>
+     <zorder>snap_image_button</zorder>
+     <zorder>graphicsView</zorder>
+     <zorder>stop_stream_button</zorder>
+     <zorder>saving_check</zorder>
+    </widget>
+   </item>
+   <item>
+    <layout class="QGridLayout" name="ROI">
+     <item row="2" column="0">
+      <widget class="QPushButton" name="reset_ROI_button">
+       <property name="text">
+        <string>Reset ROI</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="1">
+      <widget class="QPushButton" name="export_ROI_button">
+       <property name="text">
+        <string>Export ROI</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="0" colspan="2">
+      <widget class="QLabel" name="ROI_label_placeholder">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Plain</enum>
+       </property>
+       <property name="text">
+        <string>ROI number saved</string>
+       </property>
+       <property name="scaledContents">
+        <bool>true</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="0" colspan="2">
+      <widget class="Custom_pyqtgraph_widget" name="saved_ROI_image"/>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="ROI_label">
+       <property name="text">
+        <string>ROI</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="0" colspan="2">
+      <widget class="QPushButton" name="save_ROI_button">
+       <property name="text">
+        <string>Save ROI</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>Custom_pyqtgraph_widget</class>
+   <extends>QGraphicsView</extends>
+   <header location="global">custom_pyqtgraph_widget.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>
