@@ -1,7 +1,6 @@
 README.md
 setup.py
 OPTIMAQS/__init__.py
-OPTIMAQS/custom_pyqtgraph_widget.py
 OPTIMAQS.egg-info/PKG-INFO
 OPTIMAQS.egg-info/SOURCES.txt
 OPTIMAQS.egg-info/dependency_links.txt
@@ -37,6 +36,7 @@ OPTIMAQS/model/laser/laser_model.py
 OPTIMAQS/utils/__init__.py
 OPTIMAQS/utils/custom_sleep_function.py
 OPTIMAQS/utils/debug.py
+OPTIMAQS/utils/initialize_experiment.py
 OPTIMAQS/utils/json_functions.py
 OPTIMAQS/utils/signals.py
 OPTIMAQS/utils/worker.py
@@ -45,7 +45,6 @@ OPTIMAQS/view/automation/__init__.py
 OPTIMAQS/view/automation/automation_gui.py
 OPTIMAQS/view/camera/__init__.py
 OPTIMAQS/view/camera/camera_gui.py
-OPTIMAQS/view/camera/custom_pyqtgraph_widget.py
 OPTIMAQS/view/controller/__init__.py
 OPTIMAQS/view/controller/controller_gui.py
 OPTIMAQS/view/dlp/__init__.py

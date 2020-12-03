@@ -21,9 +21,10 @@ Version 0.4
 
 **To install with anaconda**
 ~~~
-conda create -n OPTIMAQS
+conda env create --file environment.yml 
 conda activate OPTIMAQS
 git clone git@github.com:jeremyforest/whole_optic_gui.git
+cd whole_optic_gui
 pip install -e .
 ~~~
 
