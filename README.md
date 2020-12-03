@@ -3,7 +3,7 @@
 
 GUI to control the hardware setup in the Reyes lab at NYU.
 
-This software allows for the control of a whole optical electrophysiology hardware based on voltage-sensitive-dye-indicator and optogenetic stimulation. The hardware involved a microscope, its controler, a laser, a dlp and a camera and more classical electrophysiological hardware. 
+This software allows for the control of a whole optical electrophysiology hardware based on voltage-sensitive-dye-indicator and optogenetic stimulation. The hardware involved a microscope, its controller, a laser, a dlp and a camera as well as more classical electrophysiological hardware. 
 
 This software is under development and release are for now quite unstable. Code is subject to major changes. 
 
@@ -34,3 +34,4 @@ pip install -e .
 conda activate OPTIMAQS
 python OPTIMAQS/view/main/main.py
 ~~~
+
